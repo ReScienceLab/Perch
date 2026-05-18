@@ -1,0 +1,110 @@
+{
+  "project": "Perch",
+  "branchName": "hal/perch-menu-bar-app",
+  "description": "Perch macOS menu bar app — Swift Package Manager app that reads ~/.config/perch/sessions.json and lets users click a session to resume it in their configured terminal (Ghostty, Warp, iTerm2, Terminal.app).",
+  "userStories": [
+    {
+      "id": "US-005",
+      "title": "Swift Package Manager project setup for PerchApp",
+      "description": "As a developer, I want a buildable Swift SPM project in App/ so that the menu bar app can be compiled and run.",
+      "acceptanceCriteria": [
+        "Directory App/ exists at project root",
+        "App/Package.swift exists, targets macOS 13, declares executable product named PerchApp, imports AppKit",
+        "App/Sources/PerchApp/main.swift exists and sets up a minimal NSApplication with activation policy .accessory (hides from Dock)",
+        "main.swift creates an NSStatusItem with button title 'P' as a placeholder icon",
+        "main.swift sets an NSMenu on the status item with a single 'Quit Perch' item that calls NSApp.terminate",
+        "Running `swift build` inside App/ succeeds with exit code 0",
+        "No Xcode project or .xcodeproj files are created — SPM only"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": "Use `swift package init --type executable --name PerchApp` inside App/ to scaffold. Then update Package.swift: set platforms to [.macOS(.v13)]. The AppKit import is required for NSStatusItem. Keep main.swift minimal — session loading comes in US-006."
+    },
+    {
+      "id": "US-006",
+      "title": "Session model and SessionStore",
+      "description": "As the app, I need to load and parse sessions from ~/.config/perch/sessions.json so they can be displayed in the menu.",
+      "acceptanceCriteria": [
+        "File App/Sources/PerchApp/Session.swift exists",
+        "Session is a Codable struct with fields: id (String), agent (String), sessionId (String, CodingKey: session_id), workingDir (String, CodingKey: working_dir), title (String), note (String), priority (String), status (String), createdAt (String, CodingKey: created_at), resumeCmd (String, CodingKey: resume_cmd)",
+        "File App/Sources/PerchApp/SessionStore.swift exists",
+        "SessionStore has a static func load() -> [Session] that reads ~/.config/perch/sessions.json, decodes JSON, and returns sessions sorted by createdAt descending; returns [] on any error",
+        "SessionStore has a static func markDone(id: String) that reads the file, sets status='done' for the matching id, and writes it back",
+        "`swift build` inside App/ succeeds"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": "Use JSONDecoder with CodingKeys to map snake_case JSON fields to camelCase Swift properties. markDone reads the raw JSON as [[String: Any]], mutates the matching entry, and re-serialises with JSONSerialization to preserve unknown fields."
+    },
+    {
+      "id": "US-007",
+      "title": "PerchConfig — config file parser",
+      "description": "As the app, I need to read ~/.config/perch/config so I know which terminal to open and how to sort sessions.",
+      "acceptanceCriteria": [
+        "File App/Sources/PerchApp/PerchConfig.swift exists",
+        "PerchConfig is a struct with properties: terminal (String, default 'ghostty'), sortBy (String, default 'date'), maxSessions (Int, default 20), showBadge (Bool, default true)",
+        "PerchConfig has a static func load() -> PerchConfig that reads ~/.config/perch/config, parses lines of the form 'key = value' (trimming whitespace, skipping lines starting with #), and returns a populated struct; returns defaults on any error",
+        "`swift build` inside App/ succeeds"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": "Simple line-by-line parser: split on first '=', trim both sides. Map 'terminal', 'sort-by', 'max-sessions', 'show-badge' keys. For Bool, treat 'true' as true. For Int, use Int() initialiser with fallback."
+    },
+    {
+      "id": "US-008",
+      "title": "Menu bar UI — session list with agent badges",
+      "description": "As a user, I want to click the Perch menu bar icon and see my pending sessions listed with agent type, title, and relative time.",
+      "acceptanceCriteria": [
+        "File App/Sources/PerchApp/StatusMenuController.swift exists",
+        "StatusMenuController is a class (NSObject) that owns the NSStatusItem and builds NSMenu",
+        "Menu bar button uses SF Symbol 'bird' via NSImage(systemSymbolName:) with fallback to text 'P'",
+        "Menu is rebuilt each time it opens (via NSMenuDelegate menuWillOpen) by calling SessionStore.load() fresh",
+        "Pending sessions (status != 'done') appear at the top, each as an NSMenuItem with title format: '<agentEmoji> <title>  ·  <relativeTime>' where agentEmoji is 🤖 for claude, 💡 for codex, 🌀 for pi",
+        "relativeTime formats: '< 1h', '2h ago', '3d ago' derived from createdAt ISO8601 string",
+        "If there are no pending sessions, show a disabled item: 'No saved sessions'",
+        "A separator followed by 'Quit Perch' item (calls NSApp.terminate) appears at the bottom",
+        "main.swift is updated to instantiate StatusMenuController and keep it alive",
+        "`swift build` inside App/ succeeds"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "NSMenuDelegate: make StatusMenuController conform to NSMenuDelegate, set menu.delegate = self, implement menuWillOpen to rebuild items. Keep a strong reference to StatusMenuController in main.swift (var controller = StatusMenuController()). For ISO8601 parsing use ISO8601DateFormatter."
+    },
+    {
+      "id": "US-009",
+      "title": "TerminalLauncher — open session in configured terminal",
+      "description": "As a user, I want clicking a session to open my configured terminal, cd to the project, and run the resume command automatically.",
+      "acceptanceCriteria": [
+        "File App/Sources/PerchApp/TerminalLauncher.swift exists",
+        "TerminalLauncher has a static func open(session: Session, terminal: String) that launches the terminal",
+        "For terminal='ghostty': runs `open -na Ghostty --args -- bash -c \"cd '<workingDir>' && <resumeCmd>; exec bash\"` via Process",
+        "For terminal='warp': runs AppleScript via NSAppleScript: tell application \"Warp\" to activate, then opens new window and sends the command",
+        "For terminal='iterm2': runs AppleScript: tell application \"iTerm\" to create window with default profile command \"cd '<workingDir>' && <resumeCmd>\"",
+        "For terminal='terminal' (Terminal.app): runs AppleScript: tell application \"Terminal\" to do script \"cd '<workingDir>' && <resumeCmd>\"",
+        "Fallback for unknown terminal: uses Terminal.app AppleScript",
+        "Clicking a session NSMenuItem calls TerminalLauncher.open with the session and loaded config.terminal",
+        "`swift build` inside App/ succeeds"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Use Process() for shell commands. For AppleScript, use NSAppleScript(source:).executeAndReturnError(). Escape single quotes in workingDir and resumeCmd before embedding in shell/AppleScript strings. The `exec bash` at the end of the ghostty command keeps the window open after the agent exits."
+    },
+    {
+      "id": "US-010",
+      "title": "File watcher, Mark Done, and badge count",
+      "description": "As a user, I want the menu to stay current when sessions.json changes, and I want to mark sessions done with a right-click.",
+      "acceptanceCriteria": [
+        "StatusMenuController sets up a DispatchSource file watcher on ~/.config/perch/sessions.json using DispatchSource.makeFileSystemObjectSource(fileDescriptor:eventMask:.write,queue:.main)",
+        "When the file changes, the watcher calls a method that triggers menu rebuild on next open (no immediate UI work on background thread)",
+        "Each pending session NSMenuItem has a submenu with one item: 'Mark as Done'",
+        "Clicking 'Mark as Done' calls SessionStore.markDone(id:) then rebuilds the menu",
+        "When showBadge is true and pending sessions count > 0, the NSStatusItem button's title shows the count as a superscript badge string (e.g. update button image or use a template image with badge overlay — simplest: set button.title to the count string alongside the icon)",
+        "`swift build` inside App/ succeeds",
+        "README.md is created at project root documenting: what Perch is, how to install (./install.sh), how to build and run the app (cd App && swift build && .build/debug/PerchApp), how to configure (~/.config/perch/config), and the /todo command usage"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "For the file watcher, open the file with O_EVTONLY flag: let fd = open((sessionsPath as NSString).fileSystemRepresentation, O_EVTONLY). Store the DispatchSource as a property to keep it alive. For badge: simplest approach is to set statusItem.button?.title to the count string (e.g. '3') and keep the image; or use NSStatusItem with variableLength and a custom attributed string."
+    }
+  ]
+}
