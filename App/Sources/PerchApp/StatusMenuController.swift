@@ -102,6 +102,24 @@ class StatusMenuController: NSObject, NSMenuDelegate {
 
         menu.addItem(NSMenuItem.separator())
 
+        let configItem = NSMenuItem(
+            title: "Open Config",
+            action: #selector(openConfig),
+            keyEquivalent: ","
+        )
+        configItem.target = self
+        menu.addItem(configItem)
+
+        let repoItem = NSMenuItem(
+            title: "GitHub Repository",
+            action: #selector(openRepo),
+            keyEquivalent: ""
+        )
+        repoItem.target = self
+        menu.addItem(repoItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(
             title: "Quit Perch",
             action: #selector(NSApplication.terminate(_:)),
@@ -196,6 +214,17 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         SessionStore.markDone(id: entry.session.id)
         rebuildMenu()
+    }
+
+    @objc private func openConfig() {
+        let path = (NSHomeDirectory() as NSString).appendingPathComponent(".config/perch/config")
+        NSWorkspace.shared.open(URL(fileURLWithPath: path))
+    }
+
+    @objc private func openRepo() {
+        if let url = URL(string: "https://github.com/ReScienceLab/Perch") {
+            NSWorkspace.shared.open(url)
+        }
     }
 
     private func agentIcon(for agent: String) -> NSImage? {
