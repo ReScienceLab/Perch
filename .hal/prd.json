@@ -103,7 +103,7 @@
         "README.md is created at project root documenting: what Perch is, how to install (./install.sh), how to build and run the app (cd App && swift build && .build/debug/PerchApp), how to configure (~/.config/perch/config), and the /todo command usage"
       ],
       "priority": 6,
-      "passes": false,
+      "passes": true,
       "notes": "For the file watcher, open the file with O_EVTONLY flag: let fd = open((sessionsPath as NSString).fileSystemRepresentation, O_EVTONLY). Store the DispatchSource as a property to keep it alive. For badge: simplest approach is to set statusItem.button?.title to the count string (e.g. '3') and keep the image; or use NSStatusItem with variableLength and a custom attributed string."
     }
   ]

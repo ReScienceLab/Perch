@@ -1,5 +1,19 @@
 # Ralph Progress Log
 
+## 2026-05-18 - US-010
+- Added DispatchSource file watcher on ~/.config/perch/sessions.json (O_EVTONLY, eventMask: .write) to StatusMenuController; watcher is stored as a property to keep it alive, and cancelled in deinit
+- Added submenu per pending session NSMenuItem with one "Mark as Done" item; markDone action calls SessionStore.markDone(id:) then rebuildMenu()
+- Added updateBadge(count:showBadge:) — sets button.title to count string when showBadge=true and count>0, clears it otherwise
+- Created README.md at project root documenting what Perch is, install, build/run, config, and /todo usage
+- Files changed: App/Sources/PerchApp/StatusMenuController.swift, README.md
+- **Learnings for future iterations:**
+  - Store DispatchSourceFileSystemObject as `(any DispatchSourceFileSystemObject)?` — the `any` keyword is required for protocol existentials in Swift 5.7+
+  - Use `Darwin.open()` explicitly to disambiguate from other `open` overloads in Swift files that import AppKit
+  - setCancelHandler is where to call `Darwin.close(fd)` — don't close the fd in the event handler
+  - NSMenuItem with a submenu: the main item's action won't fire at runtime (Apple's behavior), but the submenu items are fully actionable
+  - button.title and button.image coexist on NSStatusItem.button — setting title to "" clears the badge
+---
+
 ## Codebase Patterns
 - Claude Code commands are plain .md files in Commands/ — no YAML frontmatter; install.sh copies them to ~/.claude/commands/
 - ${CLAUDE_SESSION_ID} is the built-in template variable for Claude's session ID; use $ARGUMENTS for user-supplied text
