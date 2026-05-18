@@ -1,18 +1,42 @@
 # Perch
 
-Perch is a macOS menu bar app that lets you resume AI coding sessions (Claude, Codex, Pi) directly from your menu bar. Sessions are saved to `~/.config/perch/sessions.json` by agent-specific slash commands, and Perch displays them with a single click to reopen in your preferred terminal.
+A macOS menu bar app that lets you park AI coding sessions and resume them instantly. Run `/perch` in any supported agent to save the current session — Perch shows it in the menu bar. Click a session to copy its resume command to the clipboard, then paste it in any terminal.
+
+## Supported Agents
+
+| Agent | `/perch` command | Resume |
+|---|---|---|
+| **Claude Code** | `/perch` | `claude --resume <id>` |
+| **Codex** | `/perch` | `codex resume <id>` |
+| **Pi** | `/perch` | `pi --session <id>` |
+| **Droid** | `/perch` | `droid --resume <id>` |
+| **OpenCode** | `/perch` | `opencode session resume <id>` |
+| **Goose** | `/perch` (manual) | `goose session -r --name <id>` |
+| **Kiro** | `/perch` (manual) | `kiro-cli chat --resume-id <uuid>` |
+| **Windsurf** | `/perch` (manual) | `windsurf <dir>` |
+| **Cursor** | `/perch` (manual) | `cursor <dir>` |
+| **Trae** | `/perch` (manual) | `trae <dir>` |
+
+> **Manual** = no global command install path; add the session via `perch add` directly.
 
 ## Install
 
-Run the installer from the project root:
-
 ```sh
+git clone https://github.com/ReScienceLab/Perch.git
+cd Perch
 ./install.sh
 ```
 
-This installs the `/todo` command for Claude Code (and `/todo` skills for Codex and Pi if they are installed), and initialises `~/.config/perch/` with a default `config` file and an empty `sessions.json`.
+The installer:
+- Builds and installs the `perch` CLI to `~/.local/bin/`
+- Installs `/perch` commands for every detected agent (claude, codex, pi, droid, opencode)
+- Creates `~/.config/perch/` with a default `config` and empty `sessions.json`
 
-## Build and Run
+Make sure `~/.local/bin` is in your `PATH`.
+
+## Build the Menu Bar App
+
+Requires macOS 13+ and Swift toolchain:
 
 ```sh
 cd App
@@ -20,38 +44,60 @@ swift build
 .build/debug/PerchApp
 ```
 
-The app appears as a bird icon (🐦) in the menu bar. Click it to see your pending sessions.
+The Perch logo appears in the menu bar. Click it to see pending sessions.
+
+## Usage
+
+### Saving a session
+
+Inside a supported agent, run:
+
+```
+/perch [optional title]
+```
+
+The agent auto-generates a title in `Project: action` format (≤30 chars) if none is provided.
+
+You can also save manually from the terminal:
+
+```sh
+perch add --title "MyApp: fix login" --agent claude --session-id <id>
+```
+
+### Resuming a session
+
+Click any session in the menu bar — the resume command is copied to your clipboard. Paste it in any terminal to resume.
+
+### CLI commands
+
+```sh
+perch add --title "..." --agent <agent> --session-id <id>   # save a session
+perch list                                                   # list pending sessions
+perch list --all --json                                      # all sessions as JSON
+perch done <id-prefix>                                       # mark a session done
+```
+
+### Marking sessions done
+
+Right-click (or hover) any session in the menu and choose **Mark as Done**.
 
 ## Configure
 
-Edit `~/.config/perch/config` to customise behaviour:
+Open via the menu bar → **Open Config** (⌘,), or edit directly:
 
 ```
-# Terminal to use when opening sessions
-terminal = ghostty   # ghostty | warp | iterm2 | terminal
+~/.config/perch/config
+```
 
-# Session sort order
-sort-by = date
+```
+# Show pending session count badge on the menu bar icon
+show-badge = true
 
 # Maximum sessions to show
 max-sessions = 20
-
-# Show pending session count badge on menu bar icon
-show-badge = true
 ```
 
-## Saving Sessions with /todo
+## Links
 
-Inside a Claude Code session, run:
-
-```
-/todo [optional note]
-```
-
-This saves the current session to `~/.config/perch/sessions.json` so it appears in the Perch menu. The session entry includes the working directory, a resume command, and your optional note.
-
-For Codex and Pi, the equivalent `/todo` skill works the same way once installed via `./install.sh`.
-
-## Marking Sessions Done
-
-Right-click (or hover) any session in the Perch menu and choose **Mark as Done** to remove it from the list.
+- **GitHub**: https://github.com/ReScienceLab/Perch
+- **Issues**: https://github.com/ReScienceLab/Perch/issues
