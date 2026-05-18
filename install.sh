@@ -55,5 +55,21 @@ else
     printf '[✗] pi (not found in PATH)\n'
 fi
 
+if command -v droid >/dev/null 2>&1; then
+    mkdir -p "$HOME/.factory/skills/perch"
+    cp "$SCRIPT_DIR/Commands/droid-perch/SKILL.md" "$HOME/.factory/skills/perch/SKILL.md"
+    printf '[✓] droid → %s\n' "$HOME/.factory/skills/perch/SKILL.md"
+else
+    printf '[✗] droid (not found in PATH)\n'
+fi
+
+if command -v opencode >/dev/null 2>&1; then
+    mkdir -p "$HOME/.config/opencode/commands"
+    cp "$SCRIPT_DIR/Commands/opencode-perch.md" "$HOME/.config/opencode/commands/perch.md"
+    printf '[✓] opencode → %s\n' "$HOME/.config/opencode/commands/perch.md"
+else
+    printf '[✗] opencode (not found in PATH)\n'
+fi
+
 printf 'Done. Type /perch in any session to save it to Perch.\n'
 printf 'Make sure ~/.local/bin is in your PATH.\n'

@@ -56,9 +56,17 @@ pub fn add(
     });
 
     let resume_cmd = match agent.as_str() {
-        "codex" => format!("codex resume {session_id}"),
-        "pi" => format!("pi --session {session_id}"),
-        _ => format!("claude --resume {session_id}"),
+        "codex"    => format!("codex resume {session_id}"),
+        "pi"       => format!("pi --session {session_id}"),
+        "windsurf" => format!("windsurf {}", working_dir),
+        "cursor"   => format!("cursor {}", working_dir),
+        "trae"     => format!("trae {}", working_dir),
+        "droid"    => format!("droid --resume {session_id}"),
+        "goose"    => format!("goose session -r --name {session_id}"),
+        "opencode" => format!("opencode session resume {session_id}"),
+        "kiro"     => format!("kiro-cli chat --resume-id {session_id}"),
+        "amp"      => format!("amp threads continue {session_id}"),
+        _          => format!("claude --resume {session_id}"),
     };
 
     let entry = Session {

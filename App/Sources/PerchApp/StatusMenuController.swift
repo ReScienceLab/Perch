@@ -216,7 +216,9 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     private func loadStatusIcon() -> NSImage? {
         guard let url = Bundle.module.url(forResource: "perch", withExtension: "png"),
               let data = try? Data(contentsOf: url),
-              let rep = NSBitmapImageRep(data: data) else { return nil }
+              let rep = NSBitmapImageRep(data: data) else {
+            return NSImage(systemSymbolName: "bird", accessibilityDescription: "Perch")
+        }
         rep.size = NSSize(width: 18, height: 18)
         let image = NSImage(size: NSSize(width: 18, height: 18))
         image.addRepresentation(rep)
@@ -238,10 +240,18 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     private func agentIcon(for agent: String) -> NSImage? {
         let name: String
         switch agent.lowercased() {
-        case "claude": name = "claudecode"
-        case "codex":  name = "codex"
-        case "pi":     name = "pi"
-        default:       name = "claudecode"
+        case "claude":    name = "claudecode"
+        case "codex":     name = "codex"
+        case "pi":        name = "pi"
+        case "windsurf":  name = "windsurf"
+        case "cursor":    name = "cursor"
+        case "trae":      name = "trae"
+        case "droid":     name = "droid"
+        case "goose":     name = "goose"
+        case "opencode":  name = "opencode"
+        case "kiro":      name = "kiro"
+        case "amp":       name = "amp"
+        default:          name = "claudecode"
         }
         guard let url = Bundle.module.url(forResource: name, withExtension: "png"),
               let data = try? Data(contentsOf: url),
