@@ -214,16 +214,13 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func loadStatusIcon() -> NSImage? {
-        guard let url = Bundle.module.url(forResource: "perch", withExtension: "png"),
-              let data = try? Data(contentsOf: url),
-              let rep = NSBitmapImageRep(data: data) else {
-            return NSImage(systemSymbolName: "bird", accessibilityDescription: "Perch")
+        if let url = Bundle.module.url(forResource: "perch-logo-2", withExtension: "svg"),
+           let image = NSImage(contentsOf: url) {
+            image.size = NSSize(width: 18, height: 18)
+            image.isTemplate = true
+            return image
         }
-        rep.size = NSSize(width: 18, height: 18)
-        let image = NSImage(size: NSSize(width: 18, height: 18))
-        image.addRepresentation(rep)
-        image.isTemplate = true
-        return image
+        return NSImage(systemSymbolName: "bird", accessibilityDescription: "Perch")
     }
 
     @objc private func openConfig() {
