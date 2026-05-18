@@ -170,7 +170,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         panel.contentView = bg
 
         let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
-        panel.setFrameOrigin(NSPoint(x: screen.midX - width / 2, y: screen.midY - height / 2))
+        panel.setFrameOrigin(NSPoint(x: screen.midX - width / 2, y: screen.midY + screen.height * 0.12))
         panel.orderFront(nil)
         toastPanel = panel
 
