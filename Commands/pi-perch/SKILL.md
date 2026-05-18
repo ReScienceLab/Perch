@@ -1,5 +1,5 @@
 ---
-name: todo
+name: perch
 description: 'Save current Pi session to Perch for later resumption'
 disable-model-invocation: true
 ---

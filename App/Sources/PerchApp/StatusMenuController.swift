@@ -139,10 +139,13 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         case "pi":     name = "pi"
         default:       name = "claudecode"
         }
-        guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
-              let image = NSImage(contentsOf: url) else { return nil }
+        guard let url = Bundle.module.url(forResource: name, withExtension: "png"),
+              let data = try? Data(contentsOf: url),
+              let rep = NSBitmapImageRep(data: data) else { return nil }
+        rep.size = NSSize(width: 14, height: 14)
+        let image = NSImage(size: NSSize(width: 14, height: 14))
+        image.addRepresentation(rep)
         image.isTemplate = true
-        image.size = NSSize(width: 14, height: 14)
         return image
     }
 
