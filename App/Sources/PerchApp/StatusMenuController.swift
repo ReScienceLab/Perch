@@ -142,7 +142,10 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         )
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.level = .floating
+        panel.level = .screenSaver
+        panel.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        panel.hidesOnDeactivate = false
+        panel.becomesKeyOnlyIfNeeded = true
         panel.hasShadow = true
 
         let bg = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
