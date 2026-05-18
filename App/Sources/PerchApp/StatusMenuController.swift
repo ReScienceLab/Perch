@@ -174,7 +174,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         panel.orderFront(nil)
         toastPanel = panel
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
                 panel.animator().alphaValue = 0
