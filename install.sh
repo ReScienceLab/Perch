@@ -20,6 +20,17 @@ show-badge = true
 EOF
 fi
 
+# Build and install the perch CLI
+if command -v cargo >/dev/null 2>&1; then
+    printf 'Building perch CLI...\n'
+    cargo build --release --manifest-path "$SCRIPT_DIR/cli/Cargo.toml" --quiet
+    mkdir -p "$HOME/.local/bin"
+    cp "$SCRIPT_DIR/cli/target/release/perch" "$HOME/.local/bin/perch"
+    printf '[✓] perch CLI → %s\n' "$HOME/.local/bin/perch"
+else
+    printf '[✗] cargo not found — skipping CLI build (install Rust from https://rustup.rs)\n'
+fi
+
 if command -v claude >/dev/null 2>&1; then
     mkdir -p "$HOME/.claude/commands"
     cp "$SCRIPT_DIR/Commands/claude-perch.md" "$HOME/.claude/commands/perch.md"
@@ -45,3 +56,4 @@ else
 fi
 
 printf 'Done. Type /perch in any session to save it to Perch.\n'
+printf 'Make sure ~/.local/bin is in your PATH.\n'
