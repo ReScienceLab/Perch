@@ -26,12 +26,10 @@ enum TerminalLauncher {
 
     private static func openGhostty(workingDir: String, resumeCmd: String) {
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [
-            "-na", "Ghostty",
-            "--args", "--",
-            "bash", "-c",
-            "cd '\(workingDir)' && \(resumeCmd); exec bash"
+            "ghostty",
+            "--command=bash -c \"cd '\(workingDir)' && \(resumeCmd); exec bash\""
         ]
         try? process.run()
     }
