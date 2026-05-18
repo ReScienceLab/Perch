@@ -12,7 +12,8 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "PerchApp"
+            name: "PerchApp",
+            resources: [.process("Resources")]
         ),
     ]
 )

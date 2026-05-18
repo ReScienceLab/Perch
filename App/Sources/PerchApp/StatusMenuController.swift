@@ -73,13 +73,13 @@ class StatusMenuController: NSObject, NSMenuDelegate {
             menu.addItem(emptyItem)
         } else {
             for session in pending {
-                let emoji = agentEmoji(for: session.agent)
                 let time = relativeTime(from: session.createdAt)
                 let item = NSMenuItem(
-                    title: "\(emoji) \(session.title)  ·  \(time)",
+                    title: "\(session.title)  ·  \(time)",
                     action: #selector(openSession(_:)),
                     keyEquivalent: ""
                 )
+                item.image = agentIcon(for: session.agent)
                 item.target = self
                 let entry = SessionMenuEntry(session, terminal: config.terminal)
                 item.representedObject = entry
@@ -131,13 +131,19 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         rebuildMenu()
     }
 
-    private func agentEmoji(for agent: String) -> String {
+    private func agentIcon(for agent: String) -> NSImage? {
+        let name: String
         switch agent.lowercased() {
-        case "claude": return "🤖"
-        case "codex":  return "💡"
-        case "pi":     return "🌀"
-        default:       return "🤖"
+        case "claude": name = "claudecode"
+        case "codex":  name = "codex"
+        case "pi":     name = "pi"
+        default:       name = "claudecode"
         }
+        guard let url = Bundle.module.url(forResource: name, withExtension: "svg"),
+              let image = NSImage(contentsOf: url) else { return nil }
+        image.isTemplate = true
+        image.size = NSSize(width: 14, height: 14)
+        return image
     }
 
     private func relativeTime(from iso8601: String) -> String {
