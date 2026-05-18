@@ -6,9 +6,9 @@ Steps:
    - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
    - Otherwise, auto-generate a title in the format `[Project/Topic]: [brief description]`:
      - `[Project/Topic]`: the main app, codebase, or subject (1–3 words)
-     - `[brief description]`: what was done or decided, **≤10 Chinese characters or ≤15 English characters**
+     - `[brief description]`: what was done or decided, ≤15 characters
      - Total title must be ≤30 characters
-     - Examples: `Perch: icon 渲染修复`, `AWS Bedrock: 申诉跟进`, `SnapAction: 域名改名调研`
+     - Examples: `Perch: fix icon rendering`, `AWS Bedrock: appeal followup`, `SnapAction: rename research`
 
 2. Run the following shell commands:
 
