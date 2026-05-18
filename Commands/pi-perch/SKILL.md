@@ -25,8 +25,12 @@ ls -t "$HOME/.pi/agent/sessions/$ENCODED_CWD/"*.jsonl 2>/dev/null | head -1
 4. Extract the session ID as the UUID portion of the filename: everything after the last `_` and before `.jsonl`. For example, from `2026-03-01T04-10-17-716Z_48750e16-1234-5678-abcd-ef0123456789.jsonl` the session ID is `48750e16-1234-5678-abcd-ef0123456789`.
 
 5. Determine the title:
-   - If $ARGUMENTS is non-empty, use it as the title (truncate to 60 characters if needed).
-   - Otherwise, auto-generate a concise title (≤60 characters) that summarises the current conversation.
+   - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
+   - Otherwise, auto-generate a title in the format `[Project/Topic]: [brief description]`:
+     - `[Project/Topic]`: the main app, codebase, or subject (1–3 words)
+     - `[brief description]`: what was done or decided, **≤10 Chinese characters or ≤15 English characters**
+     - Total title must be ≤30 characters
+     - Examples: `Perch: icon 渲染修复`, `AWS Bedrock: 申诉跟进`, `SnapAction: 域名改名调研`
 
 6. Append a new session entry to `~/.config/perch/sessions.json` using Python. If the file does not exist or is empty, start with an empty list `[]`.
 
