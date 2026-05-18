@@ -1,0 +1,4 @@
+# hal runtime config (standards and commands are committed)
+.hal/*
+!.hal/standards/
+!.hal/commands/
