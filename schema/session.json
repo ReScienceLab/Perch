@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://perch.app/schema/session.json",
+  "title": "PerchSession",
+  "description": "A single agent session entry saved by a Perch /todo command.",
+  "type": "object",
+  "required": [
+    "id",
+    "agent",
+    "session_id",
+    "working_dir",
+    "title",
+    "status",
+    "created_at",
+    "resume_cmd"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this Perch entry (uuidgen, lowercase)."
+    },
+    "agent": {
+      "type": "string",
+      "enum": ["claude", "codex", "pi"],
+      "description": "The AI agent that created this session entry."
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Native session identifier from the agent runtime."
+    },
+    "working_dir": {
+      "type": "string",
+      "description": "Absolute path of the working directory when /todo was invoked."
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 60,
+      "description": "Short human-readable title (≤60 chars) describing the session."
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional freeform note provided by the user as the /todo argument."
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "description": "Session priority. Defaults to medium."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "in-progress", "done"],
+      "description": "Resumption status of the session."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of when this entry was created."
+    },
+    "resume_cmd": {
+      "type": "string",
+      "description": "Shell command to resume this session (e.g. claude --resume <session_id>)."
+    }
+  },
+  "additionalProperties": false
+}
