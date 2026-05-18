@@ -124,16 +124,16 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.showCopiedToast(command: entry.session.resumeCmd)
+            self?.showCopiedToast(title: entry.session.title, command: entry.session.resumeCmd)
         }
     }
 
-    private func showCopiedToast(command: String) {
+    private func showCopiedToast(title sessionTitle: String, command: String) {
         toastPanel?.close()
 
         let padding: CGFloat = 20
         let width: CGFloat = 420
-        let height: CGFloat = 72
+        let height: CGFloat = 90
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
@@ -154,18 +154,25 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         bg.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.93).cgColor
         bg.layer?.cornerRadius = 12
 
-        let title = NSTextField(labelWithString: "✓  Copied")
-        title.font = .systemFont(ofSize: 14, weight: .semibold)
-        title.textColor = .white
-        title.frame = NSRect(x: padding, y: height - 34, width: width - padding * 2, height: 20)
+        let header = NSTextField(labelWithString: "✓  Copied")
+        header.font = .systemFont(ofSize: 13, weight: .semibold)
+        header.textColor = NSColor(white: 0.55, alpha: 1)
+        header.frame = NSRect(x: padding, y: height - 30, width: width - padding * 2, height: 16)
+
+        let titleLabel = NSTextField(labelWithString: sessionTitle)
+        titleLabel.font = .systemFont(ofSize: 14, weight: .semibold)
+        titleLabel.textColor = .white
+        titleLabel.lineBreakMode = .byTruncatingTail
+        titleLabel.frame = NSRect(x: padding, y: height - 52, width: width - padding * 2, height: 18)
 
         let cmd = NSTextField(labelWithString: command)
         cmd.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
-        cmd.textColor = NSColor(white: 0.7, alpha: 1)
+        cmd.textColor = NSColor(white: 0.5, alpha: 1)
         cmd.lineBreakMode = .byTruncatingMiddle
-        cmd.frame = NSRect(x: padding, y: 14, width: width - padding * 2, height: 16)
+        cmd.frame = NSRect(x: padding, y: 16, width: width - padding * 2, height: 14)
 
-        bg.addSubview(title)
+        bg.addSubview(header)
+        bg.addSubview(titleLabel)
         bg.addSubview(cmd)
         panel.contentView = bg
 
