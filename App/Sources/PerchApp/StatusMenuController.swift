@@ -124,15 +124,16 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.showCopiedToast()
+            self?.showCopiedToast(command: entry.session.resumeCmd)
         }
     }
 
-    private func showCopiedToast() {
+    private func showCopiedToast(command: String) {
         toastPanel?.close()
 
-        let width: CGFloat = 130
-        let height: CGFloat = 36
+        let padding: CGFloat = 20
+        let width: CGFloat = 420
+        let height: CGFloat = 72
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
@@ -151,24 +152,29 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         let bg = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         bg.wantsLayer = true
         bg.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.93).cgColor
-        bg.layer?.cornerRadius = 10
+        bg.layer?.cornerRadius = 12
 
-        let label = NSTextField(labelWithString: "✓  Copied")
-        label.font = .systemFont(ofSize: 13, weight: .medium)
-        label.textColor = .white
-        label.frame = NSRect(x: 0, y: 0, width: width, height: height)
-        label.alignment = .center
-        bg.addSubview(label)
+        let title = NSTextField(labelWithString: "✓  Copied")
+        title.font = .systemFont(ofSize: 14, weight: .semibold)
+        title.textColor = .white
+        title.frame = NSRect(x: padding, y: height - 34, width: width - padding * 2, height: 20)
 
+        let cmd = NSTextField(labelWithString: command)
+        cmd.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        cmd.textColor = NSColor(white: 0.7, alpha: 1)
+        cmd.lineBreakMode = .byTruncatingMiddle
+        cmd.frame = NSRect(x: padding, y: 14, width: width - padding * 2, height: 16)
+
+        bg.addSubview(title)
+        bg.addSubview(cmd)
         panel.contentView = bg
 
-        // Bottom-right corner, clear of the menu bar and Dock
-        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
-        panel.setFrameOrigin(NSPoint(x: screen.maxX - width - 16, y: screen.minY + 16))
+        let screen = NSScreen.main?.frame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        panel.setFrameOrigin(NSPoint(x: screen.midX - width / 2, y: screen.midY - height / 2))
         panel.orderFront(nil)
         toastPanel = panel
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             NSAnimationContext.runAnimationGroup({ ctx in
                 ctx.duration = 0.3
                 panel.animator().alphaValue = 0
