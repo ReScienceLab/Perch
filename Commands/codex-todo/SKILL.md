@@ -37,7 +37,7 @@ except Exception:
 
 working_dir = subprocess.check_output(["pwd"], text=True).strip()
 session_id = "<SESSION_ID>"
-note = """$ARGUMENTS"""
+note = ""
 title = "<GENERATED_OR_ARGUMENT_TITLE>"
 
 entry = {
