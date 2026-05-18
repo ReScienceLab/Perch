@@ -12,6 +12,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     private let menu: NSMenu
     private var fileWatcher: (any DispatchSourceFileSystemObject)?
     private let sessionsPath: String
+    private var toastPanel: NSPanel?
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -122,15 +123,56 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
-        flashCopied()
+        showCopiedToast()
     }
 
-    private func flashCopied() {
-        guard let button = statusItem.button else { return }
-        let prev = button.title
-        button.title = " ✓"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            button.title = prev
+    private func showCopiedToast() {
+        guard let button = statusItem.button,
+              let buttonWindow = button.window else { return }
+
+        toastPanel?.close()
+
+        let width: CGFloat = 120
+        let height: CGFloat = 32
+
+        let panel = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: width, height: height),
+            styleMask: [.nonactivatingPanel, .borderless],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
+        panel.level = .popUpMenu
+        panel.hasShadow = true
+
+        let bg = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
+        bg.wantsLayer = true
+        bg.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.93).cgColor
+        bg.layer?.cornerRadius = 8
+
+        let label = NSTextField(labelWithString: "✓  Copied")
+        label.font = .systemFont(ofSize: 13, weight: .medium)
+        label.textColor = .white
+        label.frame = NSRect(x: 0, y: 0, width: width, height: height)
+        label.alignment = .center
+        bg.addSubview(label)
+
+        panel.contentView = bg
+
+        let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
+        panel.setFrameOrigin(NSPoint(x: buttonRect.midX - width / 2, y: buttonRect.minY - height - 6))
+        panel.orderFront(nil)
+        toastPanel = panel
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
+            NSAnimationContext.runAnimationGroup({ ctx in
+                ctx.duration = 0.3
+                panel.animator().alphaValue = 0
+            }, completionHandler: {
+                panel.close()
+                self?.toastPanel = nil
+            })
         }
     }
 
