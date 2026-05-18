@@ -22,11 +22,8 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         super.init()
 
         if let button = statusItem.button {
-            if let birdImage = NSImage(systemSymbolName: "bird", accessibilityDescription: "Perch") {
-                button.image = birdImage
-            } else {
-                button.title = "P"
-            }
+            button.image = loadStatusIcon()
+            button.imagePosition = .imageLeft
         }
 
         menu.delegate = self
@@ -214,6 +211,17 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         SessionStore.markDone(id: entry.session.id)
         rebuildMenu()
+    }
+
+    private func loadStatusIcon() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "perch", withExtension: "png"),
+              let data = try? Data(contentsOf: url),
+              let rep = NSBitmapImageRep(data: data) else { return nil }
+        rep.size = NSSize(width: 18, height: 18)
+        let image = NSImage(size: NSSize(width: 18, height: 18))
+        image.addRepresentation(rep)
+        image.isTemplate = true
+        return image
     }
 
     @objc private func openConfig() {
