@@ -1,5 +1,14 @@
 import AppKit
 
+private class SessionMenuEntry: NSObject {
+    let session: Session
+    let terminal: String
+    init(_ session: Session, terminal: String) {
+        self.session = session
+        self.terminal = terminal
+    }
+}
+
 class StatusMenuController: NSObject, NSMenuDelegate {
     let statusItem: NSStatusItem
     private let menu: NSMenu
@@ -29,6 +38,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     private func rebuildMenu() {
         menu.removeAllItems()
 
+        let config = PerchConfig.load()
         let sessions = SessionStore.load()
         let pending = sessions.filter { $0.status != "done" }
 
@@ -42,9 +52,11 @@ class StatusMenuController: NSObject, NSMenuDelegate {
                 let time = relativeTime(from: session.createdAt)
                 let item = NSMenuItem(
                     title: "\(emoji) \(session.title)  ·  \(time)",
-                    action: nil,
+                    action: #selector(openSession(_:)),
                     keyEquivalent: ""
                 )
+                item.target = self
+                item.representedObject = SessionMenuEntry(session, terminal: config.terminal)
                 menu.addItem(item)
             }
         }
@@ -57,6 +69,11 @@ class StatusMenuController: NSObject, NSMenuDelegate {
             keyEquivalent: "q"
         )
         menu.addItem(quitItem)
+    }
+
+    @objc private func openSession(_ sender: NSMenuItem) {
+        guard let entry = sender.representedObject as? SessionMenuEntry else { return }
+        TerminalLauncher.open(session: entry.session, terminal: entry.terminal)
     }
 
     private func agentEmoji(for agent: String) -> String {
