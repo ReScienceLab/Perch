@@ -8,7 +8,7 @@ Steps:
      - `[Project/Topic]`: the main app, codebase, or subject (1–3 words)
      - `[brief description]`: what was done or decided, ≤15 characters
      - Total title must be ≤30 characters
-     - Examples: `Perch: fix icon rendering`, `AWS Bedrock: appeal followup`, `SnapAction: rename research`
+     - Examples: `MyApp: fix login bug`, `Backend: add auth endpoint`, `CLI: refactor config`
 
 2. Run the following shell commands:
 

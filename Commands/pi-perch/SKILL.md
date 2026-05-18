@@ -30,7 +30,7 @@ ls -t "$HOME/.pi/agent/sessions/$ENCODED_CWD/"*.jsonl 2>/dev/null | head -1
      - `[Project/Topic]`: the main app, codebase, or subject (1–3 words)
      - `[brief description]`: what was done or decided, ≤15 characters
      - Total title must be ≤30 characters
-     - Examples: `Perch: fix icon rendering`, `AWS Bedrock: appeal followup`, `SnapAction: rename research`
+     - Examples: `MyApp: fix login bug`, `Backend: add auth endpoint`, `CLI: refactor config`
 
 6. Append a new session entry to `~/.config/perch/sessions.json` using Python. If the file does not exist or is empty, start with an empty list `[]`.
 
