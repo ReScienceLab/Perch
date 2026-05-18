@@ -2,10 +2,8 @@ import AppKit
 
 private class SessionMenuEntry: NSObject {
     let session: Session
-    let terminal: String
-    init(_ session: Session, terminal: String) {
+    init(_ session: Session) {
         self.session = session
-        self.terminal = terminal
     }
 }
 
@@ -81,7 +79,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
                 )
                 item.image = agentIcon(for: session.agent)
                 item.target = self
-                let entry = SessionMenuEntry(session, terminal: config.terminal)
+                let entry = SessionMenuEntry(session)
                 item.representedObject = entry
 
                 let submenu = NSMenu()
@@ -122,7 +120,18 @@ class StatusMenuController: NSObject, NSMenuDelegate {
 
     @objc private func openSession(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
-        TerminalLauncher.open(session: entry.session, terminal: entry.terminal)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
+        flashCopied()
+    }
+
+    private func flashCopied() {
+        guard let button = statusItem.button else { return }
+        let prev = button.title
+        button.title = " ✓"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            button.title = prev
+        }
     }
 
     @objc private func markDone(_ sender: NSMenuItem) {
