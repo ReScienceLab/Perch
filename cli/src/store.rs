@@ -113,46 +113,48 @@ pub fn list(all: bool, json: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn done(id_prefix: String) -> Result<()> {
-    let mut sessions = load()?;
-    let matches: Vec<usize> = sessions
-        .iter()
-        .enumerate()
-        .filter(|(_, s)| s.id.starts_with(&id_prefix))
-        .map(|(i, _)| i)
-        .collect();
-
-    match matches.len() {
-        0 => bail!("No session found matching '{id_prefix}'"),
-        1 => {
-            let title = sessions[matches[0]].title.clone();
-            sessions[matches[0]].status = "done".to_string();
-            save(&sessions)?;
-            println!("Done: {title}");
-        }
-        _ => bail!("Multiple sessions match '{id_prefix}', be more specific"),
-    }
-    Ok(())
+pub fn done(id_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
+    set_status(id_prefix, session_id, "done", "Done")
 }
 
-pub fn reopen(id_prefix: String) -> Result<()> {
+pub fn reopen(id_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
+    set_status(id_prefix, session_id, "pending", "Reopened")
+}
+
+fn set_status(id_prefix: Option<String>, session_id: Option<String>, status: &str, verb: &str) -> Result<()> {
     let mut sessions = load()?;
-    let matches: Vec<usize> = sessions
-        .iter()
-        .enumerate()
-        .filter(|(_, s)| s.id.starts_with(&id_prefix))
-        .map(|(i, _)| i)
-        .collect();
+
+    let matches: Vec<usize> = match (id_prefix, session_id) {
+        (_, Some(sid)) => sessions
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.session_id == sid)
+            .map(|(i, _)| i)
+            .collect(),
+        (Some(prefix), None) => sessions
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.id.starts_with(&prefix))
+            .map(|(i, _)| i)
+            .collect(),
+        (None, None) => bail!("Provide a session ID or --session-id"),
+    };
 
     match matches.len() {
-        0 => bail!("No session found matching '{id_prefix}'"),
+        0 => bail!("No session found"),
         1 => {
             let title = sessions[matches[0]].title.clone();
-            sessions[matches[0]].status = "pending".to_string();
+            sessions[matches[0]].status = status.to_string();
             save(&sessions)?;
-            println!("Reopened: {title}");
+            println!("{verb}: {title}");
         }
-        _ => bail!("Multiple sessions match '{id_prefix}', be more specific"),
+        _ => {
+            for i in &matches {
+                sessions[*i].status = status.to_string();
+            }
+            save(&sessions)?;
+            println!("{verb}: {} sessions", matches.len());
+        }
     }
     Ok(())
 }

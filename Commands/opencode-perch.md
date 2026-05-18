@@ -1,6 +1,6 @@
-Save the current OpenCode session to Perch for later resumption.
+Save the current OpenCode session to Perch, or mark it as done.
 
-Steps:
+## If $ARGUMENTS is "done"
 
 1. Find the most recent OpenCode session ID:
 
@@ -8,7 +8,21 @@ Steps:
 opencode session list 2>/dev/null | head -1
 ```
 
-Extract the session ID from the first line of the output (OpenCode lists sessions newest first).
+Extract the session ID from the first line.
+
+2. Run:
+
+```sh
+perch done --session-id <SESSION_ID>
+```
+
+3. Confirm:
+
+✓ Perch: marked as done
+
+## Otherwise (save session)
+
+1. Find the most recent OpenCode session ID (same as above).
 
 2. Determine the title:
    - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
@@ -24,8 +38,6 @@ Extract the session ID from the first line of the output (OpenCode lists session
 perch add --title "<TITLE>" --agent opencode --session-id <SESSION_ID>
 ```
 
-Replace `<TITLE>` and `<SESSION_ID>` with the values from steps 1–2.
-
-4. Confirm to the user with exactly this message (substituting the real title):
+4. Confirm:
 
 ✓ Perch: <title>

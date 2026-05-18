@@ -1,12 +1,12 @@
 ---
 name: perch
-description: 'Save current Codex session to Perch for later resumption'
+description: 'Save current Codex session to Perch, or mark it as done'
 disable-model-invocation: true
 ---
 
-Save the current Codex session to Perch for later resumption.
+Save the current Codex session to Perch, or mark it as done.
 
-Steps:
+## If $ARGUMENTS is "done"
 
 1. Find the most recent Codex session ID:
 
@@ -15,6 +15,20 @@ find "$HOME/.codex/sessions" -name '*.jsonl' -type f 2>/dev/null | sort | tail -
 ```
 
 Extract the session ID as the filename stem (basename without `.jsonl`).
+
+2. Run:
+
+```sh
+perch done --session-id <SESSION_ID>
+```
+
+3. Confirm:
+
+✓ Perch: marked as done
+
+## Otherwise (save session)
+
+1. Find the most recent Codex session ID (same as above).
 
 2. Determine the title:
    - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
@@ -30,8 +44,6 @@ Extract the session ID as the filename stem (basename without `.jsonl`).
 perch add --title "<TITLE>" --agent codex --session-id <SESSION_ID>
 ```
 
-Replace `<TITLE>` and `<SESSION_ID>` with the values from steps 1–2.
-
-4. Confirm to the user with exactly this message (substituting the real title):
+4. Confirm:
 
 ✓ Perch: <title>

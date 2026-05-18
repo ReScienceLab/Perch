@@ -1,4 +1,18 @@
-Save the current Claude Code session to Perch for later resumption.
+Save the current Claude Code session to Perch, or mark it as done.
+
+## If $ARGUMENTS is "done"
+
+Run:
+
+```sh
+perch done --session-id ${CLAUDE_SESSION_ID}
+```
+
+Then confirm:
+
+✓ Perch: marked as done
+
+## Otherwise (save session)
 
 Steps:
 
@@ -16,8 +30,6 @@ Steps:
 perch add --title "<TITLE>" --agent claude --session-id ${CLAUDE_SESSION_ID}
 ```
 
-Replace `<TITLE>` with the title from step 1.
-
-3. Confirm to the user with exactly this message (substituting the real title):
+3. Confirm:
 
 ✓ Perch: <title>

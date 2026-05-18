@@ -38,13 +38,19 @@ enum Commands {
     },
     /// Mark a session as done
     Done {
-        /// Session ID or unique prefix
-        id: String,
+        /// Perch session ID prefix
+        id: Option<String>,
+        /// Look up by agent-native session ID (e.g. ${CLAUDE_SESSION_ID})
+        #[arg(long)]
+        session_id: Option<String>,
     },
     /// Reopen a done session (mark it as pending again)
     Reopen {
-        /// Session ID or unique prefix
-        id: String,
+        /// Perch session ID prefix
+        id: Option<String>,
+        /// Look up by agent-native session ID
+        #[arg(long)]
+        session_id: Option<String>,
     },
 }
 
@@ -56,8 +62,8 @@ fn main() {
             store::add(title, agent, session_id, working_dir, note)
         }
         Commands::List { all, json } => store::list(all, json),
-        Commands::Done { id } => store::done(id),
-        Commands::Reopen { id } => store::reopen(id),
+        Commands::Done { id, session_id } => store::done(id, session_id),
+        Commands::Reopen { id, session_id } => store::reopen(id, session_id),
     };
 
     if let Err(e) = result {

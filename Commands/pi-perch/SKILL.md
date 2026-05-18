@@ -1,12 +1,12 @@
 ---
 name: perch
-description: 'Save current Pi session to Perch for later resumption'
+description: 'Save current Pi session to Perch, or mark it as done'
 disable-model-invocation: true
 ---
 
-Save the current Pi session to Perch for later resumption.
+Save the current Pi session to Perch, or mark it as done.
 
-Steps:
+## If $ARGUMENTS is "done"
 
 1. Get the current working directory and compute the encoded path:
 
@@ -25,6 +25,22 @@ ls -t "$HOME/.pi/agent/sessions/<ENCODED_CWD>/"*.jsonl 2>/dev/null | head -1
 
 Extract the UUID: everything after the last `_` and before `.jsonl`.
 
+3. Run:
+
+```sh
+perch done --session-id <SESSION_ID>
+```
+
+4. Confirm:
+
+✓ Perch: marked as done
+
+## Otherwise (save session)
+
+1. Get the current working directory and compute the encoded path (same as above).
+
+2. Find the most recent Pi session ID (same as above).
+
 3. Determine the title:
    - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
    - Otherwise, auto-generate a title in the format `[Project/Topic]: [brief description]`:
@@ -39,8 +55,6 @@ Extract the UUID: everything after the last `_` and before `.jsonl`.
 perch add --title "<TITLE>" --agent pi --session-id <SESSION_ID>
 ```
 
-Replace `<TITLE>` and `<SESSION_ID>` with the values from steps 2–3.
-
-5. Confirm to the user with exactly this message (substituting the real title):
+5. Confirm:
 
 ✓ Perch: <title>

@@ -1,18 +1,32 @@
 ---
 name: perch
-description: 'Save current Droid session to Perch for later resumption'
+description: 'Save current Droid session to Perch, or mark it as done'
 disable-model-invocation: true
 ---
 
-Save the current Droid session to Perch for later resumption.
+Save the current Droid session to Perch, or mark it as done.
 
-Steps:
+## If $ARGUMENTS is "done"
 
 1. Get the most recent Droid session ID:
 
 ```sh
 droid session list --json 2>/dev/null | python3 -c "import json,sys; s=json.load(sys.stdin); print(s[0]['id'] if s else '')" 2>/dev/null
 ```
+
+2. Run:
+
+```sh
+perch done --session-id <SESSION_ID>
+```
+
+3. Confirm:
+
+✓ Perch: marked as done
+
+## Otherwise (save session)
+
+1. Get the most recent Droid session ID (same as above).
 
 2. Determine the title:
    - If $ARGUMENTS is non-empty, use it as the title (truncate to 30 characters if needed).
@@ -28,6 +42,6 @@ droid session list --json 2>/dev/null | python3 -c "import json,sys; s=json.load
 perch add --title "<TITLE>" --agent droid --session-id <SESSION_ID>
 ```
 
-4. Confirm to the user with exactly this message (substituting the real title):
+4. Confirm:
 
 ✓ Perch: <title>
