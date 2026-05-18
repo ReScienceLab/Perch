@@ -123,17 +123,16 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
-        showCopiedToast()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            self?.showCopiedToast()
+        }
     }
 
     private func showCopiedToast() {
-        guard let button = statusItem.button,
-              let buttonWindow = button.window else { return }
-
         toastPanel?.close()
 
-        let width: CGFloat = 120
-        let height: CGFloat = 32
+        let width: CGFloat = 130
+        let height: CGFloat = 36
 
         let panel = NSPanel(
             contentRect: NSRect(x: 0, y: 0, width: width, height: height),
@@ -143,13 +142,13 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         )
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.level = .popUpMenu
+        panel.level = .floating
         panel.hasShadow = true
 
         let bg = NSView(frame: NSRect(x: 0, y: 0, width: width, height: height))
         bg.wantsLayer = true
         bg.layer?.backgroundColor = NSColor(white: 0.12, alpha: 0.93).cgColor
-        bg.layer?.cornerRadius = 8
+        bg.layer?.cornerRadius = 10
 
         let label = NSTextField(labelWithString: "✓  Copied")
         label.font = .systemFont(ofSize: 13, weight: .medium)
@@ -160,8 +159,9 @@ class StatusMenuController: NSObject, NSMenuDelegate {
 
         panel.contentView = bg
 
-        let buttonRect = buttonWindow.convertToScreen(button.convert(button.bounds, to: nil))
-        panel.setFrameOrigin(NSPoint(x: buttonRect.midX - width / 2, y: buttonRect.minY - height - 6))
+        // Bottom-right corner, clear of the menu bar and Dock
+        let screen = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 600)
+        panel.setFrameOrigin(NSPoint(x: screen.maxX - width - 16, y: screen.minY + 16))
         panel.orderFront(nil)
         toastPanel = panel
 
