@@ -12,10 +12,13 @@ private class SessionMenuEntry: NSObject {
 class StatusMenuController: NSObject, NSMenuDelegate {
     let statusItem: NSStatusItem
     private let menu: NSMenu
+    private var fileWatcher: (any DispatchSourceFileSystemObject)?
+    private let sessionsPath: String
 
     override init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         menu = NSMenu()
+        sessionsPath = (NSHomeDirectory() as NSString).appendingPathComponent(".config/perch/sessions.json")
 
         super.init()
 
@@ -29,6 +32,28 @@ class StatusMenuController: NSObject, NSMenuDelegate {
 
         menu.delegate = self
         statusItem.menu = menu
+
+        setupFileWatcher()
+    }
+
+    deinit {
+        fileWatcher?.cancel()
+    }
+
+    private func setupFileWatcher() {
+        let fd = Darwin.open(sessionsPath, O_EVTONLY)
+        guard fd >= 0 else { return }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: .write,
+            queue: .main
+        )
+        // No-op: menu is rebuilt fresh each time menuWillOpen fires
+        source.setEventHandler {}
+        source.setCancelHandler { Darwin.close(fd) }
+        source.resume()
+        fileWatcher = source
     }
 
     func menuWillOpen(_ menu: NSMenu) {
@@ -56,10 +81,25 @@ class StatusMenuController: NSObject, NSMenuDelegate {
                     keyEquivalent: ""
                 )
                 item.target = self
-                item.representedObject = SessionMenuEntry(session, terminal: config.terminal)
+                let entry = SessionMenuEntry(session, terminal: config.terminal)
+                item.representedObject = entry
+
+                let submenu = NSMenu()
+                let markDoneItem = NSMenuItem(
+                    title: "Mark as Done",
+                    action: #selector(markDone(_:)),
+                    keyEquivalent: ""
+                )
+                markDoneItem.target = self
+                markDoneItem.representedObject = entry
+                submenu.addItem(markDoneItem)
+                item.submenu = submenu
+
                 menu.addItem(item)
             }
         }
+
+        updateBadge(count: pending.count, showBadge: config.showBadge)
 
         menu.addItem(NSMenuItem.separator())
 
@@ -71,9 +111,24 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         menu.addItem(quitItem)
     }
 
+    private func updateBadge(count: Int, showBadge: Bool) {
+        guard let button = statusItem.button else { return }
+        if showBadge && count > 0 {
+            button.title = "\(count)"
+        } else {
+            button.title = ""
+        }
+    }
+
     @objc private func openSession(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         TerminalLauncher.open(session: entry.session, terminal: entry.terminal)
+    }
+
+    @objc private func markDone(_ sender: NSMenuItem) {
+        guard let entry = sender.representedObject as? SessionMenuEntry else { return }
+        SessionStore.markDone(id: entry.session.id)
+        rebuildMenu()
     }
 
     private func agentEmoji(for agent: String) -> String {
