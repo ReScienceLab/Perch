@@ -14,13 +14,21 @@ enum SessionStore {
     }
 
     static func markDone(id: String) {
+        setStatus(id: id, status: "done")
+    }
+
+    static func markPending(id: String) {
+        setStatus(id: id, status: "pending")
+    }
+
+    private static func setStatus(id: String, status: String) {
         let url = URL(fileURLWithPath: sessionsPath)
         guard let data = try? Data(contentsOf: url),
               var entries = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
             return
         }
         for i in entries.indices where (entries[i]["id"] as? String) == id {
-            entries[i]["status"] = "done"
+            entries[i]["status"] = status
         }
         guard let updated = try? JSONSerialization.data(withJSONObject: entries, options: .prettyPrinted) else {
             return

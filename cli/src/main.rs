@@ -41,6 +41,11 @@ enum Commands {
         /// Session ID or unique prefix
         id: String,
     },
+    /// Reopen a done session (mark it as pending again)
+    Reopen {
+        /// Session ID or unique prefix
+        id: String,
+    },
 }
 
 fn main() {
@@ -52,6 +57,7 @@ fn main() {
         }
         Commands::List { all, json } => store::list(all, json),
         Commands::Done { id } => store::done(id),
+        Commands::Reopen { id } => store::reopen(id),
     };
 
     if let Err(e) = result {

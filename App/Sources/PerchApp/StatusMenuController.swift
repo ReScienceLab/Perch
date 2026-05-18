@@ -61,37 +61,33 @@ class StatusMenuController: NSObject, NSMenuDelegate {
 
         let config = PerchConfig.load()
         let sessions = SessionStore.load()
-        let pending = sessions.filter { $0.status != "done" }
+        let pending = sessions.filter { $0.status == "pending" }
+        let done    = sessions.filter { $0.status == "done" }
 
         if pending.isEmpty {
-            let emptyItem = NSMenuItem(title: "No saved sessions", action: nil, keyEquivalent: "")
+            let emptyItem = NSMenuItem(title: "No active sessions", action: nil, keyEquivalent: "")
             emptyItem.isEnabled = false
             menu.addItem(emptyItem)
         } else {
             for session in pending {
-                let time = relativeTime(from: session.createdAt)
-                let item = NSMenuItem(
-                    title: "\(session.title)  ·  \(time)",
-                    action: #selector(openSession(_:)),
-                    keyEquivalent: ""
-                )
-                item.image = agentIcon(for: session.agent)
-                item.target = self
-                let entry = SessionMenuEntry(session)
-                item.representedObject = entry
+                menu.addItem(makeSessionItem(session, isDone: false))
+            }
+        }
 
-                let submenu = NSMenu()
-                let markDoneItem = NSMenuItem(
-                    title: "Mark as Done",
-                    action: #selector(markDone(_:)),
-                    keyEquivalent: ""
-                )
-                markDoneItem.target = self
-                markDoneItem.representedObject = entry
-                submenu.addItem(markDoneItem)
-                item.submenu = submenu
-
-                menu.addItem(item)
+        if !done.isEmpty {
+            menu.addItem(NSMenuItem.separator())
+            let doneHeader = NSMenuItem(title: "Completed", action: nil, keyEquivalent: "")
+            doneHeader.isEnabled = false
+            doneHeader.attributedTitle = NSAttributedString(
+                string: "Completed",
+                attributes: [
+                    .font: NSFont.systemFont(ofSize: 11, weight: .medium),
+                    .foregroundColor: NSColor.secondaryLabelColor
+                ]
+            )
+            menu.addItem(doneHeader)
+            for session in done {
+                menu.addItem(makeSessionItem(session, isDone: true))
             }
         }
 
@@ -123,6 +119,40 @@ class StatusMenuController: NSObject, NSMenuDelegate {
             keyEquivalent: "q"
         )
         menu.addItem(quitItem)
+    }
+
+    private func makeSessionItem(_ session: Session, isDone: Bool) -> NSMenuItem {
+        let time = relativeTime(from: session.createdAt)
+        let item = NSMenuItem(
+            title: "\(session.title)  ·  \(time)",
+            action: #selector(openSession(_:)),
+            keyEquivalent: ""
+        )
+        item.image = agentIcon(for: session.agent)
+        item.target = self
+        if isDone {
+            item.attributedTitle = NSAttributedString(
+                string: "\(session.title)  ·  \(time)",
+                attributes: [.foregroundColor: NSColor.tertiaryLabelColor]
+            )
+        }
+        let entry = SessionMenuEntry(session)
+        item.representedObject = entry
+
+        let submenu = NSMenu()
+        if isDone {
+            let reopenItem = NSMenuItem(title: "Reopen", action: #selector(markPending(_:)), keyEquivalent: "")
+            reopenItem.target = self
+            reopenItem.representedObject = entry
+            submenu.addItem(reopenItem)
+        } else {
+            let doneItem = NSMenuItem(title: "Mark as Done", action: #selector(markDone(_:)), keyEquivalent: "")
+            doneItem.target = self
+            doneItem.representedObject = entry
+            submenu.addItem(doneItem)
+        }
+        item.submenu = submenu
+        return item
     }
 
     private func updateBadge(count: Int, showBadge: Bool) {
@@ -210,6 +240,12 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     @objc private func markDone(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         SessionStore.markDone(id: entry.session.id)
+        rebuildMenu()
+    }
+
+    @objc private func markPending(_ sender: NSMenuItem) {
+        guard let entry = sender.representedObject as? SessionMenuEntry else { return }
+        SessionStore.markPending(id: entry.session.id)
         rebuildMenu()
     }
 

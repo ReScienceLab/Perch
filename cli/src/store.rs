@@ -135,6 +135,28 @@ pub fn done(id_prefix: String) -> Result<()> {
     Ok(())
 }
 
+pub fn reopen(id_prefix: String) -> Result<()> {
+    let mut sessions = load()?;
+    let matches: Vec<usize> = sessions
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.id.starts_with(&id_prefix))
+        .map(|(i, _)| i)
+        .collect();
+
+    match matches.len() {
+        0 => bail!("No session found matching '{id_prefix}'"),
+        1 => {
+            let title = sessions[matches[0]].title.clone();
+            sessions[matches[0]].status = "pending".to_string();
+            save(&sessions)?;
+            println!("Reopened: {title}");
+        }
+        _ => bail!("Multiple sessions match '{id_prefix}', be more specific"),
+    }
+    Ok(())
+}
+
 fn time_ago(iso: &str) -> String {
     let Ok(dt) = iso.parse::<DateTime<Utc>>() else {
         return String::new();
