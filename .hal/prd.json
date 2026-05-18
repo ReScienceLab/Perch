@@ -67,7 +67,7 @@
         "`swift build` inside App/ succeeds"
       ],
       "priority": 4,
-      "passes": false,
+      "passes": true,
       "notes": "NSMenuDelegate: make StatusMenuController conform to NSMenuDelegate, set menu.delegate = self, implement menuWillOpen to rebuild items. Keep a strong reference to StatusMenuController in main.swift (var controller = StatusMenuController()). For ISO8601 parsing use ISO8601DateFormatter."
     },
     {
@@ -86,7 +86,7 @@
         "`swift build` inside App/ succeeds"
       ],
       "priority": 5,
-      "passes": false,
+      "passes": true,
       "notes": "Use Process() for shell commands. For AppleScript, use NSAppleScript(source:).executeAndReturnError(). Escape single quotes in workingDir and resumeCmd before embedding in shell/AppleScript strings. The `exec bash` at the end of the ghostty command keeps the window open after the agent exits."
     },
     {

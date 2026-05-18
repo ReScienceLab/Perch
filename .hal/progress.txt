@@ -85,3 +85,36 @@
   - Int parsing: use `Int(value) ?? config.maxSessions` to fall back to default on parse failure
 ---
 
+## 2026-05-18 - US-008
+- Created App/Sources/PerchApp/StatusMenuController.swift: NSObject class conforming to NSMenuDelegate
+- Updated App/Sources/PerchApp/main.swift: removed inline status item setup; instantiates StatusMenuController as top-level var
+- StatusMenuController owns NSStatusItem, sets 'bird' SF Symbol with 'P' text fallback
+- menuWillOpen rebuilds menu fresh from SessionStore.load() each time
+- Pending sessions shown with agentEmoji + title + relativeTime; 'No saved sessions' disabled item when empty
+- relativeTime: '< 1h', 'Xh ago', 'Xd ago' using ISO8601DateFormatter (tries fractional seconds then plain)
+- Separator + 'Quit Perch' always at bottom
+- `swift build` passes successfully
+- **Learnings for future iterations:**
+  - ISO8601DateFormatter needs `.withFractionalSeconds` in formatOptions for timestamps that include milliseconds; try both variants
+  - NSMenuDelegate menuWillOpen is the correct hook for lazy menu rebuilding (not menuDidOpen)
+  - Keep StatusMenuController as a top-level `var` in main.swift so ARC doesn't deallocate it
+  - `NSImage(systemSymbolName:accessibilityDescription:)` is available on macOS 11+; safe on our macOS 13 target
+---
+
+## 2026-05-18 - US-009
+- Created App/Sources/PerchApp/TerminalLauncher.swift: enum with static open(session:terminal:) dispatching to ghostty/warp/iterm2/terminal
+- Updated App/Sources/PerchApp/StatusMenuController.swift: added SessionMenuEntry NSObject subclass for representedObject, loads PerchConfig in rebuildMenu, wires session items to @objc openSession(_:) action
+- Ghostty uses Process() with /usr/bin/open -na Ghostty --args -- bash -c "..."; exec bash
+- Warp uses AppleScript via NSAppleScript: activate + Cmd+N new window + System Events keystroke
+- iTerm2 uses AppleScript: create window with default profile command "..."
+- Terminal.app uses AppleScript: do script "..."
+- Fallback for unknown terminal: Terminal.app AppleScript
+- Single-quote escaping in shell strings: replace ' with '\''
+- `swift build` passes successfully
+- **Learnings for future iterations:**
+  - NSMenuItem.representedObject is Any? — use a private NSObject subclass (not a struct) as the wrapper so as? cast works reliably
+  - Use `item.target = self` alongside `action: #selector(...)` for NSMenuItem; without target, the responder chain may not find the method
+  - NSAppleScript requires the key "NSAppleEventsUsageDescription" in Info.plist for sandboxed apps; this app is NOT sandboxed (SPM executable), so no plist needed
+  - Process().run() is `throws` in Swift — use `try?` to silently swallow launch errors
+---
+
