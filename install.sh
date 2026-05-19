@@ -99,16 +99,17 @@ install_cli_from_release() {
 	checksum_tmp=$(mktemp "${TMPDIR:-/tmp}/perch.XXXXXX.sha256")
 	if download "$url" "$tmp" && download "$checksum_url" "$checksum_tmp" && verify_checksum "$tmp" "$checksum_tmp"; then
 		chmod +x "$tmp"
-		if "$tmp" --help >/dev/null 2>&1; then
+		if "$tmp" --help >/dev/null 2>&1 && "$tmp" --version 2>/dev/null | grep -qi '^perch '; then
 			mkdir -p "$INSTALL_DIR"
 			mv "$tmp" "$CLI_DEST"
 			rm -f "$checksum_tmp"
 			log "  ✓ Downloaded $artifact from GitHub Release"
 			log "  ✓ Verified SHA-256 checksum"
+			log "  ✓ Verified Perch CLI identity"
 			log "  ✓ Installed to $CLI_DEST"
 			return 0
 		fi
-		warn "Downloaded CLI did not run successfully: $artifact --help"
+		warn "Downloaded binary did not identify as Perch CLI."
 	fi
 	rm -f "$tmp" "$checksum_tmp"
 	return 1

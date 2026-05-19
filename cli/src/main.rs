@@ -4,7 +4,7 @@ mod store;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "perch", about = "Perch session manager")]
+#[command(name = "perch", version, about = "Perch session manager")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

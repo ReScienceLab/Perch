@@ -140,10 +140,16 @@ if [ -n "$RELEASE_ARTIFACT" ]; then
 	mkdir -p "$REMOTE_HOME" "$REMOTE_BIN" "$REMOTE_RELEASE"
 	cat >"$REMOTE_RELEASE/$RELEASE_ARTIFACT" <<'EOF'
 #!/bin/sh
-if [ "$1" = "--help" ]; then
-	printf 'mock release perch help\n'
-	exit 0
-fi
+case "$1" in
+	--help)
+		printf 'mock release perch help\n'
+		exit 0
+		;;
+	--version)
+		printf 'perch 0.1.0\n'
+		exit 0
+		;;
+esac
 printf 'mock release perch\n'
 EOF
 	chmod +x "$REMOTE_RELEASE/$RELEASE_ARTIFACT"
@@ -167,6 +173,7 @@ EOF
 	HOME="$REMOTE_HOME" PATH="$REMOTE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/remote-install.out"
 	assert_file "$REMOTE_HOME/.local/bin/perch"
 	assert_contains "$TMP_DIR/remote-install.out" "Verified SHA-256 checksum"
+	assert_contains "$TMP_DIR/remote-install.out" "Verified Perch CLI identity"
 fi
 
 printf 'install.sh tests passed\n'
