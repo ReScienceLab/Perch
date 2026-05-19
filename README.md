@@ -1,6 +1,28 @@
 # Perch
 
-Perch is a lightweight macOS menu bar app for parking AI coding sessions and resuming them later. Run `/perch` inside a supported coding agent, and Perch saves the current session into `~/.config/perch/sessions.json`. The menu bar app lists pending sessions; click one to copy a project-aware resume command to the clipboard.
+Perch helps developers park AI coding sessions and resume them later from the CLI, menu bar, or Raycast. Run `/perch` inside a supported coding agent, and Perch saves the current session into `~/.config/perch/sessions.json`.
+
+## 60-Second Quick Start
+
+Install the Perch CLI and supported agent `/perch` commands:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh
+```
+
+Then:
+
+1. Make sure `~/.local/bin` is in your shell `PATH`.
+2. Restart your coding agent.
+3. Type `/perch My task title` inside Claude Code, Codex, Pi, Droid, or OpenCode to save the current session.
+4. Resume from Raycast with **Search Sessions**, from the menu bar, or by running `perch list` and copying the resume command.
+5. Verify setup any time with:
+
+```sh
+perch doctor
+```
+
+Perch stores sessions locally only; no service or account is required.
 
 ## Highlights
 
@@ -30,6 +52,14 @@ Perch is a lightweight macOS menu bar app for parking AI coding sessions and res
 
 ## Install
 
+Recommended remote install:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh
+```
+
+Local repo install for contributors:
+
 ```sh
 git clone https://github.com/ReScienceLab/Perch.git
 cd Perch
@@ -38,12 +68,13 @@ cd Perch
 
 The installer is idempotent. It:
 
-- Builds and installs the `perch` CLI to `~/.local/bin/perch`.
+- Installs the `perch` CLI to `~/.local/bin/perch`, using the latest GitHub Release prebuilt binary by default.
+- Falls back to a local Cargo build only when running from a cloned repo and release download is unavailable.
 - Installs the same agent-agnostic command from `Commands/perch.md` for every detected agent.
 - Creates `~/.config/perch/sessions.json` if missing.
 - Creates `~/.config/perch/config` if missing.
 
-Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your coding agents.
+Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your coding agents. Run `perch doctor` after installation for actionable diagnostics.
 
 ### Installed command locations
 
@@ -66,6 +97,23 @@ swift build
 ```
 
 The Perch icon appears in the menu bar. Open it to view active and completed sessions.
+
+## Raycast Extension
+
+Perch also includes a Raycast extension for searching, resuming, and managing parked sessions from Raycast.
+
+```sh
+cd raycast-extension
+npm install
+npm run dev
+```
+
+Available commands:
+
+- **Search Sessions** — browse `~/.config/perch/sessions.json`, copy/paste project-aware resume commands, open working directories, mark sessions done, and reopen sessions.
+- **Add Session** — manually add sessions for agents that do not yet have an installed `/perch` command.
+
+Run `npm run lint` and `npm run build` in `raycast-extension/` before publishing or submitting changes.
 
 ## Usage
 
@@ -97,7 +145,7 @@ Inside a supported agent:
 Or from a terminal:
 
 ```sh
-perch done <perch-id-prefix>
+perch done <perch-id-or-prefix>
 perch done --session-id <agent-session-id>
 ```
 
@@ -142,10 +190,12 @@ perch add --title "..." --agent <agent> --session-id <id> [--working-dir <dir>] 
 perch list
 perch list --all
 perch list --all --json
-perch done <perch-id-prefix>
+perch done <perch-id-or-prefix>
 perch done --session-id <agent-session-id>
-perch reopen <perch-id-prefix>
+perch reopen <perch-id-or-prefix>
 perch reopen --session-id <agent-session-id>
+perch doctor
+perch doctor --json
 ```
 
 ## Save Semantics

@@ -34,6 +34,28 @@ enum StatusMenuLogic {
         return "cd '\(dir)' && \(session.resumeCmd)"
     }
 
+    static func projectLabel(from workingDir: String) -> String {
+        guard !workingDir.isEmpty else { return "" }
+        let name = URL(fileURLWithPath: workingDir).lastPathComponent
+        return name.isEmpty ? workingDir : name
+    }
+
+    static func groupedByProject(from sessions: [Session]) -> [(label: String, sessions: [Session])] {
+        var groups: [(label: String, sessions: [Session])] = []
+        var index: [String: Int] = [:]
+        for session in sessions {
+            let key = (session.workingDir as NSString).standardizingPath
+            let label = projectLabel(from: session.workingDir)
+            if let i = index[key] {
+                groups[i].sessions.append(session)
+            } else {
+                index[key] = groups.count
+                groups.append((label: label, sessions: [session]))
+            }
+        }
+        return groups
+    }
+
     static func relativeTime(from iso8601: String, now: Date = Date()) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -68,6 +90,8 @@ private class SessionMenuEntry: NSObject {
 public class StatusMenuController: NSObject, NSMenuDelegate {
     typealias SessionStatusWriter = (_ id: String, _ status: String) -> Void
     typealias SessionDeleter = (_ id: String) -> Void
+    typealias LaunchAtLoginGetter = () -> Bool
+    typealias LaunchAtLoginSetter = (_ enabled: Bool) throws -> Void
 
     let statusItem: NSStatusItem
     let menu: NSMenu
@@ -77,6 +101,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
     private let configLoader: () -> PerchConfig
     private let statusWriter: SessionStatusWriter
     private let sessionDeleter: SessionDeleter
+    private let launchAtLoginGetter: LaunchAtLoginGetter
+    private let launchAtLoginSetter: LaunchAtLoginSetter
     private let pasteboard: NSPasteboard
     private let toastHandler: ((String, String) -> Void)?
     private var toastPanel: NSPanel?
@@ -99,6 +125,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             }
         },
         sessionDeleter: @escaping SessionDeleter = { id in SessionStore.delete(id: id) },
+        launchAtLoginGetter: @escaping LaunchAtLoginGetter = { LaunchAtLoginManager.isEnabled() },
+        launchAtLoginSetter: @escaping LaunchAtLoginSetter = { enabled in try LaunchAtLoginManager.setEnabled(enabled) },
         pasteboard: NSPasteboard = .general,
         toastHandler: ((String, String) -> Void)? = nil,
         watchFile: Bool = true
@@ -110,6 +138,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         self.configLoader = configLoader
         self.statusWriter = statusWriter
         self.sessionDeleter = sessionDeleter
+        self.launchAtLoginGetter = launchAtLoginGetter
+        self.launchAtLoginSetter = launchAtLoginSetter
         self.pasteboard = pasteboard
         self.toastHandler = toastHandler
 
@@ -167,8 +197,15 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             emptyItem.isEnabled = false
             menu.addItem(emptyItem)
         } else {
-            for session in pending {
-                menu.addItem(makeSessionItem(session, isDone: false))
+            let projectGroups = StatusMenuLogic.groupedByProject(from: pending)
+            let useGroupHeaders = projectGroups.count > 1
+            for group in projectGroups {
+                if useGroupHeaders {
+                    menu.addItem(makeProjectHeader(group.label))
+                }
+                for session in group.sessions {
+                    menu.addItem(makeSessionItem(session, isDone: false))
+                }
             }
         }
 
@@ -192,6 +229,15 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         updateBadge(count: pending.count, showBadge: config.showBadge)
 
         menu.addItem(NSMenuItem.separator())
+
+        let launchAtLoginItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin(_:)),
+            keyEquivalent: ""
+        )
+        launchAtLoginItem.target = self
+        launchAtLoginItem.state = launchAtLoginGetter() ? .on : .off
+        menu.addItem(launchAtLoginItem)
 
         let configItem = NSMenuItem(
             title: "Open Config",
@@ -217,6 +263,19 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             keyEquivalent: "q"
         )
         menu.addItem(quitItem)
+    }
+
+    private func makeProjectHeader(_ label: String) -> NSMenuItem {
+        let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        item.attributedTitle = NSAttributedString(
+            string: label,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]
+        )
+        return item
     }
 
     private func makeSessionItem(_ session: Session, isDone: Bool) -> NSMenuItem {
@@ -363,8 +422,18 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         rebuildMenu()
     }
 
+    @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        let nextValue = sender.state != .on
+        do {
+            try launchAtLoginSetter(nextValue)
+            sender.state = nextValue ? .on : .off
+        } catch {
+            showCopiedToast(title: "Could Not Update Launch at Login", command: error.localizedDescription)
+        }
+    }
+
     func loadStatusIcon() -> NSImage? {
-        if let url = Bundle.module.url(forResource: "perch-logo-2", withExtension: "svg"),
+        if let url = Bundle.module.url(forResource: "perch-menubar", withExtension: "svg"),
            let image = NSImage(contentsOf: url) {
             image.size = NSSize(width: 18, height: 18)
             image.isTemplate = true

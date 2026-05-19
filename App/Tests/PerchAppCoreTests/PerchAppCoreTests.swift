@@ -11,6 +11,13 @@ final class PerchAppCoreTests: XCTestCase {
         return dir.appendingPathComponent(name)
     }
 
+    private func tempExecutable(_ name: String = "PerchApp") throws -> URL {
+        let url = tempFile(name)
+        try "#!/bin/sh\n".write(to: url, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: url.path)
+        return url
+    }
+
     private func sampleSession(
         id: String = UUID().uuidString,
         agent: String = "claude",
@@ -178,6 +185,60 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertFalse(parsed.showBadge)
     }
 
+    func testLaunchAtLoginManagerBuildsEscapedLaunchAgentPlist() {
+        let plist = LaunchAtLoginManager.plistContents(executablePath: "/Applications/Perch & Friends/PerchApp")
+
+        XCTAssertTrue(plist.contains("<string>com.resciencelab.perch</string>"))
+        XCTAssertTrue(plist.contains("<key>RunAtLoad</key>"))
+        XCTAssertTrue(plist.contains("/Applications/Perch &amp; Friends/PerchApp"))
+    }
+
+    func testLaunchAtLoginManagerWritesAndRemovesPlist() throws {
+        let plistURL = tempFile("com.resciencelab.perch.plist")
+        let executable = try tempExecutable()
+        var launchctlCalls: [[String]] = []
+        let launchctl: LaunchAtLoginManager.LaunchctlRunner = { launchctlCalls.append($0) }
+
+        try LaunchAtLoginManager.setEnabled(true, executablePath: executable.path, plistURL: plistURL, launchctl: launchctl)
+        XCTAssertTrue(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+        XCTAssertTrue(try String(contentsOf: plistURL).contains(executable.path))
+        XCTAssertEqual(launchctlCalls.map(\.[0]), ["bootout", "bootstrap", "enable"])
+
+        try LaunchAtLoginManager.setEnabled(false, plistURL: plistURL, launchctl: launchctl)
+        XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+        XCTAssertEqual(launchctlCalls.last?.first, "bootout")
+    }
+
+    func testLaunchAtLoginManagerRemovesPlistWhenEnableFails() throws {
+        let plistURL = tempFile("com.resciencelab.perch.plist")
+        let executable = try tempExecutable()
+        let launchctl: LaunchAtLoginManager.LaunchctlRunner = { arguments in
+            if arguments.first == "bootstrap" {
+                throw LaunchAtLoginError.launchctlFailed(arguments: arguments, status: 5, stderr: "boom")
+            }
+        }
+
+        XCTAssertThrowsError(
+            try LaunchAtLoginManager.setEnabled(true, executablePath: executable.path, plistURL: plistURL, launchctl: launchctl)
+        ) { error in
+            XCTAssertEqual(error as? LaunchAtLoginError, .launchctlFailed(arguments: ["bootstrap", "gui/\(getuid())", plistURL.path], status: 5, stderr: "boom"))
+        }
+        XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+    }
+
+    func testLaunchAtLoginManagerRejectsInvalidExecutable() throws {
+        let missing = tempFile("missing-PerchApp")
+        XCTAssertThrowsError(try LaunchAtLoginManager.validateExecutable(at: missing.path)) { error in
+            XCTAssertEqual(error as? LaunchAtLoginError, .executableNotFound(missing.path))
+        }
+
+        let notExecutable = tempFile("not-executable")
+        try "not executable".write(to: notExecutable, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try LaunchAtLoginManager.validateExecutable(at: notExecutable.path)) { error in
+            XCTAssertEqual(error as? LaunchAtLoginError, .executableNotExecutable(notExecutable.path))
+        }
+    }
+
     func testConfigInvalidMaxSessionsKeepsDefault() {
         let parsed = PerchConfig.parse("""
         max-sessions = not-a-number
@@ -239,6 +300,102 @@ final class PerchAppCoreTests: XCTestCase {
 
         XCTAssertEqual(groups.pending.map(\.id), ["pending"])
         XCTAssertEqual(groups.done.map(\.id), ["done"])
+    }
+
+    func testStatusMenuLogicExtractsProjectLabelFromPath() {
+        XCTAssertEqual(StatusMenuLogic.projectLabel(from: "/Users/yilin/Developer/Perch"), "Perch")
+        XCTAssertEqual(StatusMenuLogic.projectLabel(from: "/tmp/my-project"), "my-project")
+        XCTAssertEqual(StatusMenuLogic.projectLabel(from: "/root"), "root")
+        XCTAssertEqual(StatusMenuLogic.projectLabel(from: ""), "")
+    }
+
+    func testStatusMenuLogicGroupsByProjectPreservingSessionOrder() {
+        let p1a = sampleSession(id: "p1a", workingDir: "/projects/alpha", title: "Alpha 1")
+        let p1b = sampleSession(id: "p1b", workingDir: "/projects/alpha", title: "Alpha 2")
+        let p2a = sampleSession(id: "p2a", workingDir: "/projects/beta", title: "Beta 1")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [p1a, p1b, p2a])
+
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups[0].label, "alpha")
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["p1a", "p1b"])
+        XCTAssertEqual(groups[1].label, "beta")
+        XCTAssertEqual(groups[1].sessions.map(\.id), ["p2a"])
+    }
+
+    func testStatusMenuLogicGroupsByProjectSingleProjectProducesOneGroup() {
+        let s1 = sampleSession(id: "s1", workingDir: "/projects/alpha")
+        let s2 = sampleSession(id: "s2", workingDir: "/projects/alpha")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [s1, s2])
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["s1", "s2"])
+    }
+
+    func testStatusMenuLogicGroupsByFullPathWhenLabelsCollide() {
+        let homeApp = sampleSession(id: "home", workingDir: "/Users/yilin/app")
+        let tmpApp = sampleSession(id: "tmp", workingDir: "/tmp/app")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [homeApp, tmpApp])
+
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups[0].label, "app")
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["home"])
+        XCTAssertEqual(groups[1].label, "app")
+        XCTAssertEqual(groups[1].sessions.map(\.id), ["tmp"])
+    }
+
+    func testStatusMenuLogicNormalizesProjectPathBeforeGrouping() {
+        let s1 = sampleSession(id: "s1", workingDir: "/projects/alpha")
+        let s2 = sampleSession(id: "s2", workingDir: "/projects/./alpha/")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [s1, s2])
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["s1", "s2"])
+    }
+
+    func testStatusMenuControllerRendersProjectHeadersForMultipleProjects() {
+        let alpha = sampleSession(id: "a", workingDir: "/projects/Alpha", title: "Task A", status: "pending")
+        let beta = sampleSession(id: "b", workingDir: "/projects/Beta", title: "Task B", status: "pending")
+        let controller = StatusMenuController(
+            sessionLoader: { [alpha, beta] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+
+        controller.rebuildMenu()
+
+        let titles = controller.menu.items.map(\.title)
+        XCTAssertTrue(titles.contains("Alpha"), "Expected project header 'Alpha' in \(titles)")
+        XCTAssertTrue(titles.contains("Beta"), "Expected project header 'Beta' in \(titles)")
+        let alphaIdx = try! XCTUnwrap(titles.firstIndex(of: "Alpha"))
+        let taskAIdx = try! XCTUnwrap(titles.firstIndex { $0.contains("Task A") })
+        let betaIdx = try! XCTUnwrap(titles.firstIndex(of: "Beta"))
+        let taskBIdx = try! XCTUnwrap(titles.firstIndex { $0.contains("Task B") })
+        XCTAssertLessThan(alphaIdx, taskAIdx)
+        XCTAssertLessThan(betaIdx, taskBIdx)
+    }
+
+    func testStatusMenuControllerOmitsProjectHeadersForSingleProject() {
+        let s1 = sampleSession(id: "s1", workingDir: "/projects/Perch", title: "Task 1", status: "pending")
+        let s2 = sampleSession(id: "s2", workingDir: "/projects/Perch", title: "Task 2", status: "pending")
+        let controller = StatusMenuController(
+            sessionLoader: { [s1, s2] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+
+        controller.rebuildMenu()
+
+        XCTAssertFalse(controller.menu.items.contains { $0.title == "Perch" && !$0.isEnabled },
+                       "Should not add a project header when all sessions share one project")
+        XCTAssertTrue(controller.menu.items[0].title.contains("Task 1"))
     }
 
     func testStatusMenuLogicMapsAgentIconResourceNames() {
@@ -305,6 +462,7 @@ final class PerchAppCoreTests: XCTestCase {
 
         XCTAssertEqual(controller.menu.items.first?.title, "No active sessions")
         XCTAssertEqual(controller.statusItem.button?.title, "")
+        XCTAssertTrue(controller.menu.items.contains { $0.title == "Launch at Login" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "Open Config" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "GitHub Repository" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "Quit Perch" })
@@ -338,6 +496,32 @@ final class PerchAppCoreTests: XCTestCase {
         let doneItem = try! XCTUnwrap(controller.menu.items.first { $0.title.contains("Done") })
         XCTAssertEqual(doneItem.submenu?.items.first?.title, "Reopen")
         XCTAssertEqual(doneItem.submenu?.items.last?.title, "Delete Session")
+    }
+
+    func testStatusMenuControllerTogglesLaunchAtLogin() throws {
+        var enabled = false
+        var requestedValues: [Bool] = []
+        let controller = StatusMenuController(
+            sessionLoader: { [] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            launchAtLoginGetter: { enabled },
+            launchAtLoginSetter: { value in
+                requestedValues.append(value)
+                enabled = value
+            },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+        controller.rebuildMenu()
+
+        let item = try XCTUnwrap(controller.menu.items.first { $0.title == "Launch at Login" })
+        XCTAssertEqual(item.state, .off)
+
+        controller.toggleLaunchAtLogin(item)
+
+        XCTAssertEqual(requestedValues, [true])
+        XCTAssertEqual(item.state, .on)
     }
 
     func testStatusMenuControllerOpenSessionCopiesResumeCommandAndShowsToast() {

@@ -47,7 +47,7 @@ EOF
 done
 
 run_install() {
-	HOME="$HOME_DIR" PATH="$BIN_DIR:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/install.out"
+	HOME="$HOME_DIR" PATH="$BIN_DIR:/usr/bin:/bin:/usr/sbin:/sbin" PERCH_INSTALL_SOURCE=local "$TEST_REPO/install.sh" >"$TMP_DIR/install.out"
 }
 
 assert_file() {
@@ -60,7 +60,7 @@ assert_file() {
 assert_contains() {
 	file=$1
 	text=$2
-	if ! grep -Fq "$text" "$file"; then
+	if ! grep -Fq -- "$text" "$file"; then
 		printf 'Expected %s to contain: %s\n' "$file" "$text" >&2
 		printf 'Actual contents:\n' >&2
 		cat "$file" >&2
@@ -101,7 +101,8 @@ if [ "$(cat "$HOME_DIR/.config/perch/sessions.json")" != "[]" ]; then
 fi
 assert_contains "$HOME_DIR/.config/perch/config" "terminal = ghostty"
 assert_contains "$HOME_DIR/.config/perch/config" "show-badge = true"
-assert_contains "$TMP_DIR/install.out" "Done. Type /perch in any session to save it to Perch."
+assert_contains "$TMP_DIR/install.out" "Next steps:"
+assert_contains "$TMP_DIR/install.out" "Run perch doctor to verify your setup."
 
 printf '[{"id":"keep"}]' >"$HOME_DIR/.config/perch/sessions.json"
 printf 'terminal = terminal\n' >"$HOME_DIR/.config/perch/config"
@@ -120,10 +121,59 @@ NO_AGENT_HOME="$TMP_DIR/no-agent-home"
 NO_AGENT_BIN="$TMP_DIR/no-agent-bin"
 mkdir -p "$NO_AGENT_HOME" "$NO_AGENT_BIN"
 cp "$BIN_DIR/cargo" "$NO_AGENT_BIN/cargo"
-HOME="$NO_AGENT_HOME" PATH="$NO_AGENT_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/no-agent-install.out"
+HOME="$NO_AGENT_HOME" PATH="$NO_AGENT_BIN:/usr/bin:/bin:/usr/sbin:/sbin" PERCH_INSTALL_SOURCE=local "$TEST_REPO/install.sh" >"$TMP_DIR/no-agent-install.out"
 assert_file "$NO_AGENT_HOME/.config/perch/sessions.json"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] claude (not found in PATH)"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] codex (not found in PATH)"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] pi (not found in PATH)"
+assert_contains "$TMP_DIR/no-agent-install.out" "- claude not found"
+assert_contains "$TMP_DIR/no-agent-install.out" "- codex not found"
+assert_contains "$TMP_DIR/no-agent-install.out" "- pi not found"
+
+case "$(uname -s):$(uname -m)" in
+	Darwin:arm64) RELEASE_ARTIFACT=perch-aarch64-apple-darwin ;;
+	Darwin:x86_64) RELEASE_ARTIFACT=perch-x86_64-apple-darwin ;;
+	*) RELEASE_ARTIFACT= ;;
+esac
+
+if [ -n "$RELEASE_ARTIFACT" ]; then
+	REMOTE_HOME="$TMP_DIR/remote-home"
+	REMOTE_BIN="$TMP_DIR/remote-bin"
+	REMOTE_RELEASE="$TMP_DIR/remote-release"
+	mkdir -p "$REMOTE_HOME" "$REMOTE_BIN" "$REMOTE_RELEASE"
+	cat >"$REMOTE_RELEASE/$RELEASE_ARTIFACT" <<'EOF'
+#!/bin/sh
+case "$1" in
+	--help)
+		printf 'mock release perch help\n'
+		exit 0
+		;;
+	--version)
+		printf 'perch 0.1.0\n'
+		exit 0
+		;;
+esac
+printf 'mock release perch\n'
+EOF
+	chmod +x "$REMOTE_RELEASE/$RELEASE_ARTIFACT"
+	shasum -a 256 "$REMOTE_RELEASE/$RELEASE_ARTIFACT" >"$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256"
+	cat >"$REMOTE_BIN/curl" <<EOF
+#!/bin/sh
+url= dest=
+while [ \$# -gt 0 ]; do
+	case "\$1" in
+		-o) shift; dest=\$1 ;;
+		http*) url=\$1 ;;
+	esac
+	shift
+ done
+case "\$url" in
+	*.sha256) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256" "\$dest" ;;
+	*) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT" "\$dest" ;;
+esac
+EOF
+	chmod +x "$REMOTE_BIN/curl"
+	HOME="$REMOTE_HOME" PATH="$REMOTE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/remote-install.out"
+	assert_file "$REMOTE_HOME/.local/bin/perch"
+	assert_contains "$TMP_DIR/remote-install.out" "Verified SHA-256 checksum"
+	assert_contains "$TMP_DIR/remote-install.out" "Verified Perch CLI identity"
+fi
 
 printf 'install.sh tests passed\n'

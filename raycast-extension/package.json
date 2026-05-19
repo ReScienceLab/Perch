@@ -1,0 +1,147 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "perch",
+  "title": "Perch",
+  "description": "Search, resume, and manage parked Claude Code, Codex, Pi, OpenCode, and AI coding agent sessions.",
+  "icon": "icon.png",
+  "author": "Yilin",
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "ai",
+    "agent",
+    "coding",
+    "session",
+    "resume",
+    "continue",
+    "park",
+    "claude",
+    "codex",
+    "pi",
+    "opencode",
+    "cursor"
+  ],
+  "commands": [
+    {
+      "name": "search-sessions",
+      "title": "Search Sessions",
+      "description": "Search and resume parked Claude Code, Codex, Pi, OpenCode, and AI coding sessions.",
+      "icon": "icon.png",
+      "mode": "view",
+      "keywords": [
+        "ai",
+        "agent",
+        "session",
+        "resume",
+        "continue",
+        "park",
+        "claude",
+        "codex",
+        "pi",
+        "opencode",
+        "cursor",
+        "windsurf"
+      ]
+    },
+    {
+      "name": "add-session",
+      "title": "Add Session",
+      "description": "Manually add a Claude Code, Codex, Pi, OpenCode, or AI coding session to Perch.",
+      "icon": "icon.png",
+      "mode": "view",
+      "keywords": [
+        "ai",
+        "agent",
+        "session",
+        "manual",
+        "add",
+        "park",
+        "claude",
+        "codex",
+        "pi",
+        "opencode",
+        "cursor",
+        "windsurf"
+      ]
+    }
+  ],
+  "preferences": [
+    {
+      "name": "sessionsPath",
+      "title": "Sessions File",
+      "description": "Path to Perch sessions.json. Leave empty to use ~/.config/perch/sessions.json.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/.config/perch/sessions.json"
+    },
+    {
+      "name": "perchBinaryPath",
+      "title": "Perch CLI Path",
+      "description": "Optional path to the perch binary for add, done, and reopen actions.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "~/.local/bin/perch"
+    },
+    {
+      "name": "defaultStatusFilter",
+      "title": "Default Status Filter",
+      "description": "Which sessions to show by default.",
+      "type": "dropdown",
+      "required": false,
+      "default": "pending",
+      "data": [
+        {
+          "title": "Pending",
+          "value": "pending"
+        },
+        {
+          "title": "All",
+          "value": "all"
+        },
+        {
+          "title": "Done",
+          "value": "done"
+        }
+      ]
+    },
+    {
+      "name": "resumeBehavior",
+      "title": "Default Resume Action",
+      "description": "What pressing Enter on a session does.",
+      "type": "dropdown",
+      "required": false,
+      "default": "copy",
+      "data": [
+        {
+          "title": "Copy to Clipboard",
+          "value": "copy"
+        },
+        {
+          "title": "Paste into Frontmost App",
+          "value": "paste"
+        }
+      ]
+    }
+  ],
+  "scripts": {
+    "dev": "ray develop",
+    "build": "ray build -e dist",
+    "lint": "ray lint",
+    "fix-lint": "ray lint --fix",
+    "publish": "ray publish"
+  },
+  "dependencies": {
+    "@raycast/api": "^1.104.17"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.10",
+    "typescript": "^5.8.0"
+  }
+}
