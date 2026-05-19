@@ -333,6 +333,29 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertEqual(groups[0].sessions.map(\.id), ["s1", "s2"])
     }
 
+    func testStatusMenuLogicGroupsByFullPathWhenLabelsCollide() {
+        let homeApp = sampleSession(id: "home", workingDir: "/Users/yilin/app")
+        let tmpApp = sampleSession(id: "tmp", workingDir: "/tmp/app")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [homeApp, tmpApp])
+
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups[0].label, "app")
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["home"])
+        XCTAssertEqual(groups[1].label, "app")
+        XCTAssertEqual(groups[1].sessions.map(\.id), ["tmp"])
+    }
+
+    func testStatusMenuLogicNormalizesProjectPathBeforeGrouping() {
+        let s1 = sampleSession(id: "s1", workingDir: "/projects/alpha")
+        let s2 = sampleSession(id: "s2", workingDir: "/projects/./alpha/")
+
+        let groups = StatusMenuLogic.groupedByProject(from: [s1, s2])
+
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].sessions.map(\.id), ["s1", "s2"])
+    }
+
     func testStatusMenuControllerRendersProjectHeadersForMultipleProjects() {
         let alpha = sampleSession(id: "a", workingDir: "/projects/Alpha", title: "Task A", status: "pending")
         let beta = sampleSession(id: "b", workingDir: "/projects/Beta", title: "Task B", status: "pending")

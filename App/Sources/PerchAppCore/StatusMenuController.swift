@@ -44,11 +44,12 @@ enum StatusMenuLogic {
         var groups: [(label: String, sessions: [Session])] = []
         var index: [String: Int] = [:]
         for session in sessions {
+            let key = (session.workingDir as NSString).standardizingPath
             let label = projectLabel(from: session.workingDir)
-            if let i = index[label] {
+            if let i = index[key] {
                 groups[i].sessions.append(session)
             } else {
-                index[label] = groups.count
+                index[key] = groups.count
                 groups.append((label: label, sessions: [session]))
             }
         }
