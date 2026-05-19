@@ -68,6 +68,8 @@ private class SessionMenuEntry: NSObject {
 public class StatusMenuController: NSObject, NSMenuDelegate {
     typealias SessionStatusWriter = (_ id: String, _ status: String) -> Void
     typealias SessionDeleter = (_ id: String) -> Void
+    typealias LaunchAtLoginGetter = () -> Bool
+    typealias LaunchAtLoginSetter = (_ enabled: Bool) throws -> Void
 
     let statusItem: NSStatusItem
     let menu: NSMenu
@@ -77,6 +79,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
     private let configLoader: () -> PerchConfig
     private let statusWriter: SessionStatusWriter
     private let sessionDeleter: SessionDeleter
+    private let launchAtLoginGetter: LaunchAtLoginGetter
+    private let launchAtLoginSetter: LaunchAtLoginSetter
     private let pasteboard: NSPasteboard
     private let toastHandler: ((String, String) -> Void)?
     private var toastPanel: NSPanel?
@@ -99,6 +103,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             }
         },
         sessionDeleter: @escaping SessionDeleter = { id in SessionStore.delete(id: id) },
+        launchAtLoginGetter: @escaping LaunchAtLoginGetter = { LaunchAtLoginManager.isEnabled() },
+        launchAtLoginSetter: @escaping LaunchAtLoginSetter = { enabled in try LaunchAtLoginManager.setEnabled(enabled) },
         pasteboard: NSPasteboard = .general,
         toastHandler: ((String, String) -> Void)? = nil,
         watchFile: Bool = true
@@ -110,6 +116,8 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         self.configLoader = configLoader
         self.statusWriter = statusWriter
         self.sessionDeleter = sessionDeleter
+        self.launchAtLoginGetter = launchAtLoginGetter
+        self.launchAtLoginSetter = launchAtLoginSetter
         self.pasteboard = pasteboard
         self.toastHandler = toastHandler
 
@@ -192,6 +200,15 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         updateBadge(count: pending.count, showBadge: config.showBadge)
 
         menu.addItem(NSMenuItem.separator())
+
+        let launchAtLoginItem = NSMenuItem(
+            title: "Launch at Login",
+            action: #selector(toggleLaunchAtLogin(_:)),
+            keyEquivalent: ""
+        )
+        launchAtLoginItem.target = self
+        launchAtLoginItem.state = launchAtLoginGetter() ? .on : .off
+        menu.addItem(launchAtLoginItem)
 
         let configItem = NSMenuItem(
             title: "Open Config",
@@ -361,6 +378,16 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
         sessionDeleter(entry.session.id)
         rebuildMenu()
+    }
+
+    @objc func toggleLaunchAtLogin(_ sender: NSMenuItem) {
+        let nextValue = sender.state != .on
+        do {
+            try launchAtLoginSetter(nextValue)
+            sender.state = nextValue ? .on : .off
+        } catch {
+            showCopiedToast(title: "Could Not Update Launch at Login", command: error.localizedDescription)
+        }
     }
 
     func loadStatusIcon() -> NSImage? {

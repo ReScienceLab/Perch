@@ -178,6 +178,25 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertFalse(parsed.showBadge)
     }
 
+    func testLaunchAtLoginManagerBuildsEscapedLaunchAgentPlist() {
+        let plist = LaunchAtLoginManager.plistContents(executablePath: "/Applications/Perch & Friends/PerchApp")
+
+        XCTAssertTrue(plist.contains("<string>com.resciencelab.perch</string>"))
+        XCTAssertTrue(plist.contains("<key>RunAtLoad</key>"))
+        XCTAssertTrue(plist.contains("/Applications/Perch &amp; Friends/PerchApp"))
+    }
+
+    func testLaunchAtLoginManagerWritesAndRemovesPlist() throws {
+        let plistURL = tempFile("com.resciencelab.perch.plist")
+
+        try LaunchAtLoginManager.setEnabled(true, executablePath: "/tmp/PerchApp", plistURL: plistURL)
+        XCTAssertTrue(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+        XCTAssertTrue(try String(contentsOf: plistURL).contains("/tmp/PerchApp"))
+
+        try LaunchAtLoginManager.setEnabled(false, plistURL: plistURL)
+        XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+    }
+
     func testConfigInvalidMaxSessionsKeepsDefault() {
         let parsed = PerchConfig.parse("""
         max-sessions = not-a-number
@@ -305,6 +324,7 @@ final class PerchAppCoreTests: XCTestCase {
 
         XCTAssertEqual(controller.menu.items.first?.title, "No active sessions")
         XCTAssertEqual(controller.statusItem.button?.title, "")
+        XCTAssertTrue(controller.menu.items.contains { $0.title == "Launch at Login" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "Open Config" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "GitHub Repository" })
         XCTAssertTrue(controller.menu.items.contains { $0.title == "Quit Perch" })
@@ -338,6 +358,32 @@ final class PerchAppCoreTests: XCTestCase {
         let doneItem = try! XCTUnwrap(controller.menu.items.first { $0.title.contains("Done") })
         XCTAssertEqual(doneItem.submenu?.items.first?.title, "Reopen")
         XCTAssertEqual(doneItem.submenu?.items.last?.title, "Delete Session")
+    }
+
+    func testStatusMenuControllerTogglesLaunchAtLogin() throws {
+        var enabled = false
+        var requestedValues: [Bool] = []
+        let controller = StatusMenuController(
+            sessionLoader: { [] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            launchAtLoginGetter: { enabled },
+            launchAtLoginSetter: { value in
+                requestedValues.append(value)
+                enabled = value
+            },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+        controller.rebuildMenu()
+
+        let item = try XCTUnwrap(controller.menu.items.first { $0.title == "Launch at Login" })
+        XCTAssertEqual(item.state, .off)
+
+        controller.toggleLaunchAtLogin(item)
+
+        XCTAssertEqual(requestedValues, [true])
+        XCTAssertEqual(item.state, .on)
     }
 
     func testStatusMenuControllerOpenSessionCopiesResumeCommandAndShowsToast() {
