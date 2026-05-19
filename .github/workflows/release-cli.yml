@@ -1,4 +1,4 @@
-name: Release CLI
+name: Release CLI and PerchApp
 
 on:
   push:
@@ -16,9 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - aarch64-apple-darwin
-          - x86_64-apple-darwin
+        include:
+          - target: aarch64-apple-darwin
+            swift_arch: arm64
+          - target: x86_64-apple-darwin
+            swift_arch: x86_64
     steps:
       - name: Validate release tag
         if: startsWith(github.ref, 'refs/tags/')
@@ -37,10 +39,54 @@ jobs:
       - name: Build perch CLI
         run: cargo build --release --manifest-path cli/Cargo.toml --target ${{ matrix.target }}
 
-      - name: Package binary
+      - name: Package CLI binary
         run: |
           cp cli/target/${{ matrix.target }}/release/perch perch-${{ matrix.target }}
           shasum -a 256 perch-${{ matrix.target }} > perch-${{ matrix.target }}.sha256
+
+      - name: Build PerchApp
+        run: swift build -c release --package-path App --arch ${{ matrix.swift_arch }}
+
+      - name: Package PerchApp
+        run: |
+          APP_BIN=$(find App/.build -path '*/release/PerchApp' -type f | head -n 1)
+          if [ -z "$APP_BIN" ]; then
+            echo "Could not find built PerchApp executable"
+            find App/.build -name PerchApp -type f -print
+            exit 1
+          fi
+          if ! "$APP_BIN" --version | grep -qi '^PerchApp '; then
+            echo "Built executable did not identify as PerchApp"
+            exit 1
+          fi
+          rm -rf package-app
+          mkdir -p package-app/Perch.app/Contents/MacOS package-app/Perch.app/Contents/Resources
+          cp "$APP_BIN" package-app/Perch.app/Contents/MacOS/PerchApp
+          chmod +x package-app/Perch.app/Contents/MacOS/PerchApp
+          cat > package-app/Perch.app/Contents/Info.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>CFBundleExecutable</key>
+            <string>PerchApp</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.resciencelab.perch</string>
+            <key>CFBundleName</key>
+            <string>Perch</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>0.1.0</string>
+            <key>LSMinimumSystemVersion</key>
+            <string>13.0</string>
+            <key>LSUIElement</key>
+            <true/>
+          </dict>
+          </plist>
+          EOF
+          (cd package-app && ditto -c -k Perch.app ../PerchApp-${{ matrix.target }}.zip)
+          shasum -a 256 PerchApp-${{ matrix.target }}.zip > PerchApp-${{ matrix.target }}.zip.sha256
 
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v4
@@ -49,6 +95,8 @@ jobs:
           path: |
             perch-${{ matrix.target }}
             perch-${{ matrix.target }}.sha256
+            PerchApp-${{ matrix.target }}.zip
+            PerchApp-${{ matrix.target }}.zip.sha256
 
       - name: Upload release assets
         if: startsWith(github.ref, 'refs/tags/')
@@ -60,6 +108,8 @@ jobs:
           if ! gh release upload "${GITHUB_REF_NAME}" \
             perch-${{ matrix.target }} \
             perch-${{ matrix.target }}.sha256 \
+            PerchApp-${{ matrix.target }}.zip \
+            PerchApp-${{ matrix.target }}.zip.sha256 \
             --clobber; then
             echo "Failed to upload release assets"
             exit 1

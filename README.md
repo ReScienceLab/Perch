@@ -70,9 +70,19 @@ The installer is idempotent. It:
 
 - Installs the `perch` CLI to `~/.local/bin/perch`, using the latest GitHub Release prebuilt binary by default.
 - Falls back to a local Cargo build only when running from a cloned repo and release download is unavailable.
+- Installs the native macOS `PerchApp` menu bar app to `~/.local/share/perch/PerchApp` by default on macOS.
 - Installs the same agent-agnostic command from `Commands/perch.md` for every detected agent.
 - Creates `~/.config/perch/sessions.json` if missing.
 - Creates `~/.config/perch/config` if missing.
+
+Installer environment flags:
+
+```sh
+PERCH_INSTALL_APP=0          # skip native menu bar app installation
+PERCH_INSTALL_APP=1          # force native menu bar app installation on macOS
+PERCH_APP_INSTALL_DIR=...    # override app install directory; default ~/.local/share/perch
+PERCH_OPEN_APP=0             # install but do not open PerchApp after install
+```
 
 Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your coding agents. Run `perch doctor` after installation for actionable diagnostics.
 
@@ -88,15 +98,36 @@ Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your
 
 ## Menu Bar App
 
-Requires macOS 13+ and a Swift toolchain.
+On macOS, the one-line installer installs and opens the native menu bar app by default:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh
+```
+
+The app is installed to `~/.local/share/perch/PerchApp` unless `PERCH_APP_INSTALL_DIR` is set. The Perch icon appears in the menu bar. Open it to view active and completed sessions.
+
+Control the app from the CLI:
+
+```sh
+perch menubar start [--app-path <path>]
+perch menubar stop
+perch menubar status
+perch menubar login enable [--app-path <path>]
+perch menubar login disable
+perch menubar login status
+```
+
+`perch menubar login enable` writes `~/Library/LaunchAgents/com.resciencelab.perch.plist` and uses `launchctl bootstrap/enable` for the current GUI user. The LaunchAgent runs with your user privileges and only launches the configured PerchApp binary. The installer opens the app after install but does not enable launch-at-login automatically.
+
+If launch-at-login fails with permission errors, check that your terminal has the required macOS privacy permissions for writing `~/Library/LaunchAgents` and running `launchctl` in your GUI session.
+
+Local development still requires macOS 13+ and a Swift toolchain:
 
 ```sh
 cd App
 swift build
 .build/debug/PerchApp
 ```
-
-The Perch icon appears in the menu bar. Open it to view active and completed sessions.
 
 ## Raycast Extension
 
@@ -194,6 +225,12 @@ perch done <perch-id-or-prefix>
 perch done --session-id <agent-session-id>
 perch reopen <perch-id-or-prefix>
 perch reopen --session-id <agent-session-id>
+perch menubar start [--app-path <path>]
+perch menubar stop
+perch menubar status
+perch menubar login enable [--app-path <path>]
+perch menubar login disable
+perch menubar login status
 perch doctor
 perch doctor --json
 ```
@@ -319,6 +356,32 @@ perch list --all
 ```
 
 Also verify that `~/.config/perch/sessions.json` exists and contains valid JSON.
+
+### The menu bar app did not install or start
+
+Check app status:
+
+```sh
+perch menubar status
+```
+
+Re-run the installer with app installation enabled:
+
+```sh
+PERCH_INSTALL_APP=1 ./install.sh
+```
+
+If a checksum mismatch is reported, the artifact was not installed. Retry later or install from a known-good release asset.
+
+### Launch at login is not working
+
+Inspect and reset the LaunchAgent:
+
+```sh
+perch menubar login status
+perch menubar login disable
+perch menubar login enable
+```
 
 ## Links
 

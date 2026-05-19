@@ -128,9 +128,18 @@ assert_contains "$TMP_DIR/no-agent-install.out" "- codex not found"
 assert_contains "$TMP_DIR/no-agent-install.out" "- pi not found"
 
 case "$(uname -s):$(uname -m)" in
-	Darwin:arm64) RELEASE_ARTIFACT=perch-aarch64-apple-darwin ;;
-	Darwin:x86_64) RELEASE_ARTIFACT=perch-x86_64-apple-darwin ;;
-	*) RELEASE_ARTIFACT= ;;
+Darwin:arm64)
+	RELEASE_ARTIFACT=perch-aarch64-apple-darwin
+	APP_ARTIFACT=PerchApp-aarch64-apple-darwin.zip
+	;;
+Darwin:x86_64)
+	RELEASE_ARTIFACT=perch-x86_64-apple-darwin
+	APP_ARTIFACT=PerchApp-x86_64-apple-darwin.zip
+	;;
+*)
+	RELEASE_ARTIFACT=
+	APP_ARTIFACT=
+	;;
 esac
 
 if [ -n "$RELEASE_ARTIFACT" ]; then
@@ -154,6 +163,26 @@ printf 'mock release perch\n'
 EOF
 	chmod +x "$REMOTE_RELEASE/$RELEASE_ARTIFACT"
 	shasum -a 256 "$REMOTE_RELEASE/$RELEASE_ARTIFACT" >"$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256"
+
+	APP_BUILD_DIR="$TMP_DIR/app-build"
+	mkdir -p "$APP_BUILD_DIR/Perch.app/Contents/MacOS"
+	python3 - "$APP_BUILD_DIR/Perch.app/Contents/MacOS/PerchApp" <<'PY'
+import sys
+with open(sys.argv[1], "wb") as app:
+    app.write(bytes.fromhex("cffaedfe"))
+    app.write(b"mock Mach-O PerchApp\n")
+PY
+	chmod +x "$APP_BUILD_DIR/Perch.app/Contents/MacOS/PerchApp"
+	python3 - "$REMOTE_RELEASE/$APP_ARTIFACT" "$APP_BUILD_DIR/Perch.app/Contents/MacOS/PerchApp" <<'PY'
+import sys
+import zipfile
+zip_path, app_path = sys.argv[1], sys.argv[2]
+info = zipfile.ZipInfo("Perch.app/Contents/MacOS/PerchApp")
+info.external_attr = 0o755 << 16
+with open(app_path, "rb") as source, zipfile.ZipFile(zip_path, "w") as archive:
+    archive.writestr(info, source.read())
+PY
+	shasum -a 256 "$REMOTE_RELEASE/$APP_ARTIFACT" >"$REMOTE_RELEASE/$APP_ARTIFACT.sha256"
 	cat >"$REMOTE_BIN/curl" <<EOF
 #!/bin/sh
 url= dest=
@@ -165,15 +194,40 @@ while [ \$# -gt 0 ]; do
 	shift
  done
 case "\$url" in
+	*"$APP_ARTIFACT.sha256") cp "$REMOTE_RELEASE/$APP_ARTIFACT.sha256" "\$dest" ;;
+	*"$APP_ARTIFACT") cp "$REMOTE_RELEASE/$APP_ARTIFACT" "\$dest" ;;
 	*.sha256) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256" "\$dest" ;;
 	*) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT" "\$dest" ;;
 esac
 EOF
 	chmod +x "$REMOTE_BIN/curl"
+	cat >"$REMOTE_BIN/otool" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+	chmod +x "$REMOTE_BIN/otool"
+	cat >"$REMOTE_BIN/lipo" <<EOF
+#!/bin/sh
+printf '%s\n' "$(uname -m)"
+EOF
+	chmod +x "$REMOTE_BIN/lipo"
 	HOME="$REMOTE_HOME" PATH="$REMOTE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/remote-install.out"
 	assert_file "$REMOTE_HOME/.local/bin/perch"
+	assert_file "$REMOTE_HOME/.local/share/perch/PerchApp"
 	assert_contains "$TMP_DIR/remote-install.out" "Verified SHA-256 checksum"
 	assert_contains "$TMP_DIR/remote-install.out" "Verified Perch CLI identity"
+	assert_contains "$TMP_DIR/remote-install.out" "Installed PerchApp to $REMOTE_HOME/.local/share/perch/PerchApp"
+	assert_contains "$TMP_DIR/remote-install.out" "  ✓ Opened $REMOTE_HOME/.local/share/perch/PerchApp"
+
+	SKIP_APP_HOME="$TMP_DIR/skip-app-home"
+	mkdir -p "$SKIP_APP_HOME"
+	HOME="$SKIP_APP_HOME" PATH="$REMOTE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" PERCH_INSTALL_APP=0 "$TEST_REPO/install.sh" >"$TMP_DIR/skip-app-install.out"
+	assert_file "$SKIP_APP_HOME/.local/bin/perch"
+	if [ -e "$SKIP_APP_HOME/.local/share/perch/PerchApp" ]; then
+		printf 'PERCH_INSTALL_APP=0 should skip app installation\n' >&2
+		exit 1
+	fi
+	assert_contains "$TMP_DIR/skip-app-install.out" "PerchApp install skipped"
 fi
 
 printf 'install.sh tests passed\n'
