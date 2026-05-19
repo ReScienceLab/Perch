@@ -18,6 +18,7 @@
       "name": "search-sessions",
       "title": "Search Sessions",
       "description": "Search and resume parked AI coding sessions.",
+      "icon": "icon.png",
       "mode": "view",
       "keywords": [
         "ai",
@@ -32,6 +33,7 @@
       "name": "add-session",
       "title": "Add Session",
       "description": "Manually add an AI coding session to Perch.",
+      "icon": "icon.png",
       "mode": "view",
       "keywords": [
         "ai",

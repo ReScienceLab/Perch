@@ -5,11 +5,13 @@ import {
   Color,
   Icon,
   List,
+  environment,
   Toast,
   getPreferenceValues,
   openExtensionPreferences,
   showToast,
 } from "@raycast/api";
+import { join } from "node:path";
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { markDone, PerchCliMissingError, reopen } from "./lib/cli";
 import { timeAgo } from "./lib/dates";
@@ -260,15 +262,26 @@ function statusIcon(status: string) {
 }
 
 function agentIcon(agent: string) {
-  switch (agent) {
+  return { source: join(environment.assetsPath, `${agentIconName(agent)}.png`) };
+}
+
+function agentIconName(agent: string): string {
+  switch (agent.toLowerCase()) {
     case "claude":
-      return { source: Icon.Message, tintColor: Color.Orange };
+      return "claudecode";
     case "codex":
-      return { source: Icon.Code, tintColor: Color.Purple };
     case "pi":
-      return { source: Icon.CommandSymbol, tintColor: Color.Red };
+    case "windsurf":
+    case "cursor":
+    case "trae":
+    case "droid":
+    case "goose":
+    case "opencode":
+    case "kiro":
+      return agent.toLowerCase();
+    case "amp":
     default:
-      return { source: Icon.Terminal, tintColor: Color.SecondaryText };
+      return "claudecode";
   }
 }
 
