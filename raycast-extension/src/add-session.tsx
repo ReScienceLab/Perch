@@ -56,7 +56,12 @@ export default function AddSession() {
     } catch (error) {
       toast.style = Toast.Style.Failure;
       toast.title = error instanceof PerchCliMissingError ? "Perch CLI Not Found" : "Could Not Add Session";
-      toast.message = error instanceof Error ? error.message : String(error);
+      toast.message =
+        error instanceof PerchCliMissingError
+          ? "Install Perch with the one-line installer or set Perch CLI Path, then run perch doctor."
+          : error instanceof Error
+            ? error.message
+            : String(error);
     }
   }
 

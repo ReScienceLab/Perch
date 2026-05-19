@@ -185,7 +185,12 @@ async function mutateSession(operation: () => Promise<string>, onMutated: () => 
   } catch (error) {
     toast.style = Toast.Style.Failure;
     toast.title = error instanceof PerchCliMissingError ? "Perch CLI Not Found" : "Perch Command Failed";
-    toast.message = error instanceof Error ? error.message : String(error);
+    toast.message =
+      error instanceof PerchCliMissingError
+        ? "Install Perch with the one-line installer or set Perch CLI Path, then run perch doctor."
+        : error instanceof Error
+          ? error.message
+          : String(error);
   }
 }
 
@@ -195,7 +200,7 @@ function getEmptyView(state: LoadState, statusFilter: StatusFilter): ReactElemen
       <List.EmptyView
         icon={Icon.ExclamationMark}
         title="Perch Sessions File Not Found"
-        description={`Expected ${state.path}. Run ./install.sh or save a session with /perch first.`}
+        description={`Expected ${state.path}. Install Perch with: curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh — then run perch doctor or save a session with /perch.`}
         actions={
           <ActionPanel>
             <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
