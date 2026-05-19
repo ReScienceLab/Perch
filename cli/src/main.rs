@@ -66,8 +66,14 @@ fn main() {
             note,
         } => store::add(title, agent, session_id, working_dir, note),
         Commands::List { all, json } => store::list(all, json),
-        Commands::Done { id_or_prefix, session_id } => store::done(id_or_prefix, session_id),
-        Commands::Reopen { id_or_prefix, session_id } => store::reopen(id_or_prefix, session_id),
+        Commands::Done {
+            id_or_prefix,
+            session_id,
+        } => store::done(id_or_prefix, session_id),
+        Commands::Reopen {
+            id_or_prefix,
+            session_id,
+        } => store::reopen(id_or_prefix, session_id),
     };
 
     if let Err(e) = result {

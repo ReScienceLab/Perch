@@ -122,7 +122,11 @@ fn add_list_done_and_reopen_end_to_end() {
     assert!(updated[0]["updated_at"].as_str().is_some());
 
     let done_by_id = perch(&home, &["done", &id]);
-    assert!(done_by_id.status.success(), "stderr: {}", stderr(&done_by_id));
+    assert!(
+        done_by_id.status.success(),
+        "stderr: {}",
+        stderr(&done_by_id)
+    );
     assert_eq!(stdout(&done_by_id), "Done: Updated title\n");
 
     let reopen = perch(&home, &["reopen", &id]);

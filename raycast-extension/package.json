@@ -2,7 +2,7 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "perch",
   "title": "Perch",
-  "description": "Search and resume parked AI coding sessions from Raycast.",
+  "description": "Search, resume, and manage parked Claude Code, Codex, Pi, OpenCode, and AI coding agent sessions.",
   "icon": "icon.png",
   "author": "yilin",
   "platforms": [
@@ -13,33 +13,61 @@
     "Productivity"
   ],
   "license": "MIT",
+  "keywords": [
+    "ai",
+    "agent",
+    "coding",
+    "session",
+    "resume",
+    "continue",
+    "park",
+    "claude",
+    "codex",
+    "pi",
+    "opencode",
+    "cursor"
+  ],
   "commands": [
     {
       "name": "search-sessions",
       "title": "Search Sessions",
-      "description": "Search and resume parked AI coding sessions.",
+      "description": "Search and resume parked Claude Code, Codex, Pi, OpenCode, and AI coding sessions.",
       "icon": "icon.png",
       "mode": "view",
       "keywords": [
         "ai",
         "agent",
+        "session",
         "resume",
+        "continue",
+        "park",
         "claude",
         "codex",
-        "pi"
+        "pi",
+        "opencode",
+        "cursor",
+        "windsurf"
       ]
     },
     {
       "name": "add-session",
       "title": "Add Session",
-      "description": "Manually add an AI coding session to Perch.",
+      "description": "Manually add a Claude Code, Codex, Pi, OpenCode, or AI coding session to Perch.",
       "icon": "icon.png",
       "mode": "view",
       "keywords": [
         "ai",
         "agent",
+        "session",
         "manual",
-        "park"
+        "add",
+        "park",
+        "claude",
+        "codex",
+        "pi",
+        "opencode",
+        "cursor",
+        "windsurf"
       ]
     }
   ],

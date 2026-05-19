@@ -1,6 +1,8 @@
-# Perch Raycast Extension
+# Perch
 
-Search, resume, and manage Perch AI coding sessions from Raycast.
+Perch helps developers search, resume, and manage parked Claude Code, Codex, Pi, OpenCode, Droid, Cursor, Windsurf, Goose, Kiro, Amp, and other AI coding agent sessions from Raycast.
+
+Use Perch when you jump between multiple projects or AI coding agents and want one fast command palette for continuing saved sessions.
 
 ## Requirements
 
@@ -12,17 +14,17 @@ Search, resume, and manage Perch AI coding sessions from Raycast.
 
 ### Search Sessions
 
-Lists parked sessions from Perch. Press Enter to copy (or paste, depending on preferences) a project-aware resume command:
+Lists parked Claude Code, Codex, Pi, OpenCode, and other AI coding sessions from Perch. Press Enter to copy (or paste, depending on preferences) a project-aware resume command:
 
 ```sh
 cd '/path/to/project' && claude --resume <session-id>
 ```
 
-Actions include copy resume command, paste resume command, open working directory, mark done, reopen, and copy IDs.
+Actions include copy resume command, paste resume command, open working directory, mark done, reopen, and copy IDs. Search matches session titles, project paths, agent names, and session IDs.
 
 ### Add Session
 
-Manually add a session for agents that do not yet have a `/perch` command installed.
+Manually add a Claude Code, Codex, Pi, OpenCode, Cursor, Windsurf, or other AI coding session for agents that do not yet have a `/perch` command installed.
 
 ## Preferences
 
