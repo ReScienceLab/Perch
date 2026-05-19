@@ -38,12 +38,12 @@ export async function runPerch(args: string[]): Promise<string> {
   return result.stdout.trim();
 }
 
-export async function markDone(idPrefix: string): Promise<string> {
-  return runPerch(["done", idPrefix]);
+export async function markDone(id: string): Promise<string> {
+  return runPerch(["done", id]);
 }
 
-export async function reopen(idPrefix: string): Promise<string> {
-  return runPerch(["reopen", idPrefix]);
+export async function reopen(id: string): Promise<string> {
+  return runPerch(["reopen", id]);
 }
 
 export interface AddSessionInput {

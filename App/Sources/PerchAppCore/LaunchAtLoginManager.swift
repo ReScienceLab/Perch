@@ -1,10 +1,16 @@
 import Foundation
 
 enum LaunchAtLoginError: LocalizedError, Equatable {
+    case executableNotFound(String)
+    case executableNotExecutable(String)
     case launchctlFailed(arguments: [String], status: Int32, stderr: String)
 
     var errorDescription: String? {
         switch self {
+        case let .executableNotFound(path):
+            return "Perch app executable does not exist: \(path)"
+        case let .executableNotExecutable(path):
+            return "Perch app executable is not executable: \(path)"
         case let .launchctlFailed(arguments, status, stderr):
             let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
             if detail.isEmpty {
@@ -56,6 +62,7 @@ struct LaunchAtLoginManager {
         plistURL: URL = plistURL,
         launchctl: LaunchctlRunner = runLaunchctl
     ) throws {
+        try validateExecutable(at: executablePath)
         try FileManager.default.createDirectory(at: plistURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try plistContents(executablePath: executablePath).write(to: plistURL, atomically: true, encoding: .utf8)
 
@@ -73,6 +80,15 @@ struct LaunchAtLoginManager {
         try? launchctl(["bootout", "gui/\(getuid())", plistURL.path])
         if FileManager.default.fileExists(atPath: plistURL.path) {
             try FileManager.default.removeItem(at: plistURL)
+        }
+    }
+
+    static func validateExecutable(at path: String, fileManager: FileManager = .default) throws {
+        guard fileManager.fileExists(atPath: path) else {
+            throw LaunchAtLoginError.executableNotFound(path)
+        }
+        guard fileManager.isExecutableFile(atPath: path) else {
+            throw LaunchAtLoginError.executableNotExecutable(path)
         }
     }
 
