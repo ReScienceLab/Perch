@@ -77,7 +77,7 @@ sha256_file() {
 verify_checksum() {
 	file=$1
 	checksum_file=$2
-	expected=$(awk 'NR == 1 {print $1}' "$checksum_file")
+	expected=$(awk '{print $1; exit}' "$checksum_file")
 	actual=$(sha256_file "$file") || return 1
 	if [ -z "$expected" ]; then
 		warn "Checksum file is empty or invalid."
