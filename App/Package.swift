@@ -11,9 +11,17 @@ let package = Package(
         .executable(name: "PerchApp", targets: ["PerchApp"])
     ],
     targets: [
+        .target(
+            name: "PerchAppCore",
+            resources: [.process("Resources")]
+        ),
         .executableTarget(
             name: "PerchApp",
-            resources: [.process("Resources")]
+            dependencies: ["PerchAppCore"]
+        ),
+        .testTarget(
+            name: "PerchAppCoreTests",
+            dependencies: ["PerchAppCore"]
         ),
     ]
 )

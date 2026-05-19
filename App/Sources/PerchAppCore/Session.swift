@@ -1,6 +1,6 @@
 import Foundation
 
-struct Session: Codable {
+struct Session: Codable, Equatable {
     let id: String
     let agent: String
     let sessionId: String
@@ -10,6 +10,7 @@ struct Session: Codable {
     let priority: String
     let status: String
     let createdAt: String
+    let updatedAt: String?
     let resumeCmd: String
 
     enum CodingKeys: String, CodingKey {
@@ -22,6 +23,7 @@ struct Session: Codable {
         case priority
         case status
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
         case resumeCmd = "resume_cmd"
     }
 }

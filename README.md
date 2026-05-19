@@ -1,23 +1,32 @@
 # Perch
 
-A macOS menu bar app that lets you park AI coding sessions and resume them instantly. Run `/perch` in any supported agent to save the current session — Perch shows it in the menu bar. Click a session to copy its resume command to the clipboard, then paste it in any terminal.
+Perch is a lightweight macOS menu bar app for parking AI coding sessions and resuming them later. Run `/perch` inside a supported coding agent, and Perch saves the current session into `~/.config/perch/sessions.json`. The menu bar app lists pending sessions; click one to copy a project-aware resume command to the clipboard.
+
+## Highlights
+
+- One `/perch` command shared across agents — no per-agent prompt drift.
+- Fast session detection where the agent exposes a session ID (for example `CLAUDE_CODE_SESSION_ID` in Claude Code), with safe fallbacks when needed.
+- Simple local JSON storage; no service or account required.
+- Menu bar UI for viewing pending/completed sessions.
+- CLI for scripting, listing, marking done, and reopening sessions.
 
 ## Supported Agents
 
-| Agent | `/perch` command | Resume |
-|---|---|---|
-| **Claude Code** | `/perch` | `claude --resume <id>` |
-| **Codex** | `/perch` | `codex resume <id>` |
-| **Pi** | `/perch` | `pi --session <id>` |
-| **Droid** | `/perch` | `droid --resume <id>` |
-| **OpenCode** | `/perch` | `opencode session resume <id>` |
-| **Goose** | `/perch` (manual) | `goose session -r --name <id>` |
-| **Kiro** | `/perch` (manual) | `kiro-cli chat --resume-id <uuid>` |
-| **Windsurf** | `/perch` (manual) | `windsurf <dir>` |
-| **Cursor** | `/perch` (manual) | `cursor <dir>` |
-| **Trae** | `/perch` (manual) | `trae <dir>` |
+| Agent       | `/perch` install | Resume command                   |
+| ----------- | ---------------- | -------------------------------- |
+| Claude Code | Automatic        | `claude --resume <id>`           |
+| Codex       | Automatic        | `codex resume <id>`              |
+| Pi          | Automatic        | `pi --session <id>`              |
+| Droid       | Automatic        | `droid --resume <id>`            |
+| OpenCode    | Automatic        | `opencode session resume <id>`   |
+| Goose       | Manual CLI add   | `goose session -r --name <id>`   |
+| Kiro        | Manual CLI add   | `kiro-cli chat --resume-id <id>` |
+| Windsurf    | Manual CLI add   | `windsurf <working-dir>`         |
+| Cursor      | Manual CLI add   | `cursor <working-dir>`           |
+| Trae        | Manual CLI add   | `trae <working-dir>`             |
+| Amp         | Manual CLI add   | `amp threads continue <id>`      |
 
-> **Manual** = no global command install path; add the session via `perch add` directly.
+> **Automatic** means `install.sh` detects the agent binary and installs `/perch` into that agent's command/skill directory. **Manual CLI add** means Perch supports the resume command, but there is no installed slash-command path yet.
 
 ## Install
 
@@ -27,16 +36,28 @@ cd Perch
 ./install.sh
 ```
 
-The installer:
-- Builds and installs the `perch` CLI to `~/.local/bin/`
-- Installs `/perch` commands for every detected agent (claude, codex, pi, droid, opencode)
-- Creates `~/.config/perch/` with a default `config` and empty `sessions.json`
+The installer is idempotent. It:
 
-Make sure `~/.local/bin` is in your `PATH`.
+- Builds and installs the `perch` CLI to `~/.local/bin/perch`.
+- Installs the same agent-agnostic command from `Commands/perch.md` for every detected agent.
+- Creates `~/.config/perch/sessions.json` if missing.
+- Creates `~/.config/perch/config` if missing.
 
-## Build the Menu Bar App
+Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your coding agents.
 
-Requires macOS 13+ and Swift toolchain:
+### Installed command locations
+
+| Agent       | Installed file                         |
+| ----------- | -------------------------------------- |
+| Claude Code | `~/.claude/commands/perch.md`          |
+| Codex       | `~/.codex/skills/perch/SKILL.md`       |
+| Pi          | `~/.pi/agent/skills/perch/SKILL.md`    |
+| Droid       | `~/.factory/skills/perch/SKILL.md`     |
+| OpenCode    | `~/.config/opencode/commands/perch.md` |
+
+## Menu Bar App
+
+Requires macOS 13+ and a Swift toolchain.
 
 ```sh
 cd App
@@ -44,58 +65,210 @@ swift build
 .build/debug/PerchApp
 ```
 
-The Perch logo appears in the menu bar. Click it to see pending sessions.
+The Perch icon appears in the menu bar. Open it to view active and completed sessions.
 
 ## Usage
 
-### Saving a session
+### Save the current session
 
-Inside a supported agent, run:
+Inside a supported agent:
 
-```
+```text
 /perch [optional title]
 ```
 
-The agent auto-generates a title in `Project: action` format (≤30 chars) if none is provided.
+Examples:
 
-You can also save manually from the terminal:
+```text
+/perch
+/perch Backend: add auth endpoint
+```
+
+If you omit the title, the agent generates a short `Project: action` title.
+
+### Mark the current session done
+
+Inside a supported agent:
+
+```text
+/perch done
+```
+
+Or from a terminal:
 
 ```sh
-perch add --title "MyApp: fix login" --agent claude --session-id <id>
+perch done <perch-id-prefix>
+perch done --session-id <agent-session-id>
 ```
 
-### Resuming a session
+### Delete a saved session
 
-Click any session in the menu bar — the resume command is copied to your clipboard. Paste it in any terminal to resume.
+Open the Perch menu bar item, open a session's submenu, and choose **Delete Session**. This removes the saved Perch entry only; it does not delete the underlying agent history from Claude/Codex/Pi/etc.
 
-### CLI commands
+### Resume a session
+
+Open the Perch menu bar item and click a session. Perch copies a project-aware shell command to your clipboard:
 
 ```sh
-perch add --title "..." --agent <agent> --session-id <id>   # save a session
-perch list                                                   # list pending sessions
-perch list --all --json                                      # all sessions as JSON
-perch done <id-prefix>                                       # mark a session done
+cd '/absolute/path/to/project' && claude --resume <id>
+cd '/absolute/path/to/project' && pi --session <id>
+cd '/absolute/path/to/project' && opencode session resume <id>
 ```
 
-### Marking sessions done
+Paste it into any terminal to resume from the correct working directory.
 
-Right-click (or hover) any session in the menu and choose **Mark as Done**.
+### Add a session manually
 
-## Configure
+Use this for agents that do not yet have an installed `/perch` command:
 
-Open via the menu bar → **Open Config** (⌘,), or edit directly:
-
+```sh
+perch add \
+  --title "MyApp: fix login" \
+  --agent claude \
+  --session-id <id> \
+  --working-dir "$PWD"
 ```
+
+For workspace-based agents such as Cursor/Windsurf/Trae, Perch stores the working directory and creates the appropriate resume command:
+
+```sh
+perch add --title "Site: continue CSS" --agent cursor --session-id unused --working-dir "$PWD"
+```
+
+## CLI Reference
+
+```sh
+perch add --title "..." --agent <agent> --session-id <id> [--working-dir <dir>] [--note "..."]  # create or update
+perch list
+perch list --all
+perch list --all --json
+perch done <perch-id-prefix>
+perch done --session-id <agent-session-id>
+perch reopen <perch-id-prefix>
+perch reopen --session-id <agent-session-id>
+```
+
+## Save Semantics
+
+`perch add` is an upsert keyed by `agent + session_id`:
+
+- First save creates a new pending entry.
+- Saving the same resumed session again updates the existing entry instead of creating a duplicate.
+- Updates refresh `title`, `working_dir`, `note`, `resume_cmd`, set `status` back to `pending`, and write `updated_at`.
+- `created_at` remains the original first-save timestamp.
+
+## How `/perch` Finds the Current Session
+
+Perch uses one shared command file. The agent identifies itself (`claude`, `codex`, `pi`, `droid`, or `opencode`) and runs only its own session detector.
+
+Current fast paths and fallbacks:
+
+- **Claude Code**: prefers `CLAUDE_CODE_SESSION_ID`, then older env vars, then the current project's `~/.claude/projects/.../sessions-index.json`.
+- **Pi**: prefers `PI_SESSION_ID`, then the current project's `~/.pi/agent/sessions/.../*.jsonl`.
+- **Codex**: prefers `CODEX_SESSION_ID`, then the latest file in `~/.codex/sessions`.
+- **Droid**: prefers `DROID_SESSION_ID`, then `droid session list --json`.
+- **OpenCode**: prefers `OPENCODE_SESSION_ID`, then `opencode session list`.
+
+The command is intentionally strict: it should not try another agent's detector just because that binary exists on your machine.
+
+## Data Storage
+
+Sessions are stored locally at:
+
+```text
+~/.config/perch/sessions.json
+```
+
+Each entry looks like:
+
+```json
+{
+  "id": "perch-entry-uuid",
+  "agent": "claude",
+  "session_id": "agent-native-session-id",
+  "working_dir": "/path/to/project",
+  "title": "Project: action",
+  "note": "",
+  "priority": "medium",
+  "status": "pending",
+  "created_at": "2026-05-18T10:00:00Z",
+  "updated_at": "2026-05-18T10:30:00Z",
+  "resume_cmd": "claude --resume agent-native-session-id"
+}
+```
+
+The schema is documented in [`schema/session.json`](schema/session.json).
+
+## Configuration
+
+Open config from the menu bar (**Open Config**) or edit:
+
+```text
 ~/.config/perch/config
 ```
 
-```
-# Show pending session count badge on the menu bar icon
-show-badge = true
+Default file:
 
-# Maximum sessions to show
+```toml
+# Perch configuration
+terminal = ghostty
+sort-by = date
 max-sessions = 20
+auto-start = true
+show-badge = true
 ```
+
+`show-badge` controls whether the menu bar icon shows the pending session count. Other keys are kept for app behavior and future UI options.
+
+## Development
+
+Run the full test suite:
+
+```sh
+./scripts/test.sh
+```
+
+Run individual suites:
+
+```sh
+cargo test --manifest-path cli/Cargo.toml
+cd App && swift test
+./tests/install.sh
+python3 tests/schema.py
+```
+
+Build release artifacts locally:
+
+```sh
+cargo build --release --manifest-path cli/Cargo.toml
+cd App && swift build -c release
+```
+
+## Troubleshooting
+
+### `/perch` says `perch: command not found`
+
+Add `~/.local/bin` to your `PATH`, then restart the agent so it inherits the updated environment.
+
+### `/perch` cannot determine the session ID
+
+Update the relevant agent and reinstall Perch:
+
+```sh
+./install.sh
+```
+
+For Claude Code, newer versions expose `CLAUDE_CODE_SESSION_ID` to Bash tools, which is the fastest path.
+
+### The menu bar app shows no sessions
+
+Check what the CLI sees:
+
+```sh
+perch list --all
+```
+
+Also verify that `~/.config/perch/sessions.json` exists and contains valid JSON.
 
 ## Links
 

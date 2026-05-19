@@ -58,9 +58,13 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Add { title, agent, session_id, working_dir, note } => {
-            store::add(title, agent, session_id, working_dir, note)
-        }
+        Commands::Add {
+            title,
+            agent,
+            session_id,
+            working_dir,
+            note,
+        } => store::add(title, agent, session_id, working_dir, note),
         Commands::List { all, json } => store::list(all, json),
         Commands::Done { id, session_id } => store::done(id, session_id),
         Commands::Reopen { id, session_id } => store::reopen(id, session_id),

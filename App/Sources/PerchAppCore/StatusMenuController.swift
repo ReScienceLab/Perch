@@ -1,5 +1,63 @@
 import AppKit
 
+public enum PerchResources {
+    public static func appIcon() -> NSImage? {
+        guard let url = Bundle.module.url(forResource: "app-icon", withExtension: "png") else { return nil }
+        return NSImage(contentsOf: url)
+    }
+}
+
+enum StatusMenuLogic {
+    static func sessionGroups(from sessions: [Session]) -> (pending: [Session], done: [Session]) {
+        (pending: sessions.filter { $0.status == "pending" }, done: sessions.filter { $0.status == "done" })
+    }
+
+    static func agentIconResourceName(for agent: String) -> String {
+        switch agent.lowercased() {
+        case "claude": return "claudecode"
+        case "codex": return "codex"
+        case "pi": return "pi"
+        case "windsurf": return "windsurf"
+        case "cursor": return "cursor"
+        case "trae": return "trae"
+        case "droid": return "droid"
+        case "goose": return "goose"
+        case "opencode": return "opencode"
+        case "kiro": return "kiro"
+        case "amp": return "claudecode"
+        default: return "claudecode"
+        }
+    }
+
+    static func clipboardCommand(for session: Session) -> String {
+        let dir = TerminalLauncher.escapeForShell(session.workingDir)
+        return "cd '\(dir)' && \(session.resumeCmd)"
+    }
+
+    static func relativeTime(from iso8601: String, now: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: iso8601)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: iso8601)
+        }
+        guard let createdAt = date else { return "" }
+
+        let seconds = now.timeIntervalSince(createdAt)
+        let hours = seconds / 3600
+        let days = seconds / 86400
+
+        if hours < 1 {
+            return "< 1h"
+        } else if days < 1 {
+            return "\(Int(hours))h ago"
+        } else {
+            return "\(Int(days))d ago"
+        }
+    }
+}
+
 private class SessionMenuEntry: NSObject {
     let session: Session
     init(_ session: Session) {
@@ -7,17 +65,53 @@ private class SessionMenuEntry: NSObject {
     }
 }
 
-class StatusMenuController: NSObject, NSMenuDelegate {
+public class StatusMenuController: NSObject, NSMenuDelegate {
+    typealias SessionStatusWriter = (_ id: String, _ status: String) -> Void
+    typealias SessionDeleter = (_ id: String) -> Void
+
     let statusItem: NSStatusItem
-    private let menu: NSMenu
+    let menu: NSMenu
     private var fileWatcher: (any DispatchSourceFileSystemObject)?
     private let sessionsPath: String
+    private let sessionLoader: () -> [Session]
+    private let configLoader: () -> PerchConfig
+    private let statusWriter: SessionStatusWriter
+    private let sessionDeleter: SessionDeleter
+    private let pasteboard: NSPasteboard
+    private let toastHandler: ((String, String) -> Void)?
     private var toastPanel: NSPanel?
 
-    override init() {
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        menu = NSMenu()
-        sessionsPath = (NSHomeDirectory() as NSString).appendingPathComponent(".config/perch/sessions.json")
+    public override convenience init() {
+        self.init(watchFile: true)
+    }
+
+    init(
+        statusItem: NSStatusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength),
+        menu: NSMenu = NSMenu(),
+        sessionsPath: String = (NSHomeDirectory() as NSString).appendingPathComponent(".config/perch/sessions.json"),
+        sessionLoader: @escaping () -> [Session] = { SessionStore.load() },
+        configLoader: @escaping () -> PerchConfig = { PerchConfig.load() },
+        statusWriter: @escaping SessionStatusWriter = { id, status in
+            if status == "done" {
+                SessionStore.markDone(id: id)
+            } else {
+                SessionStore.markPending(id: id)
+            }
+        },
+        sessionDeleter: @escaping SessionDeleter = { id in SessionStore.delete(id: id) },
+        pasteboard: NSPasteboard = .general,
+        toastHandler: ((String, String) -> Void)? = nil,
+        watchFile: Bool = true
+    ) {
+        self.statusItem = statusItem
+        self.menu = menu
+        self.sessionsPath = sessionsPath
+        self.sessionLoader = sessionLoader
+        self.configLoader = configLoader
+        self.statusWriter = statusWriter
+        self.sessionDeleter = sessionDeleter
+        self.pasteboard = pasteboard
+        self.toastHandler = toastHandler
 
         super.init()
 
@@ -29,11 +123,14 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
-        setupFileWatcher()
+        if watchFile {
+            setupFileWatcher()
+        }
     }
 
     deinit {
         fileWatcher?.cancel()
+        NSStatusBar.system.removeStatusItem(statusItem)
     }
 
     private func setupFileWatcher() {
@@ -52,17 +149,18 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         fileWatcher = source
     }
 
-    func menuWillOpen(_ menu: NSMenu) {
+    public func menuWillOpen(_ menu: NSMenu) {
         rebuildMenu()
     }
 
-    private func rebuildMenu() {
+    func rebuildMenu() {
         menu.removeAllItems()
 
-        let config = PerchConfig.load()
-        let sessions = SessionStore.load()
-        let pending = sessions.filter { $0.status == "pending" }
-        let done    = sessions.filter { $0.status == "done" }
+        let config = configLoader()
+        let sessions = sessionLoader()
+        let groups = StatusMenuLogic.sessionGroups(from: sessions)
+        let pending = groups.pending
+        let done = groups.done
 
         if pending.isEmpty {
             let emptyItem = NSMenuItem(title: "No active sessions", action: nil, keyEquivalent: "")
@@ -122,7 +220,7 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func makeSessionItem(_ session: Session, isDone: Bool) -> NSMenuItem {
-        let time = relativeTime(from: session.createdAt)
+        let time = StatusMenuLogic.relativeTime(from: session.createdAt)
         let item = NSMenuItem(
             title: "\(session.title)  ·  \(time)",
             action: #selector(openSession(_:)),
@@ -151,6 +249,11 @@ class StatusMenuController: NSObject, NSMenuDelegate {
             doneItem.representedObject = entry
             submenu.addItem(doneItem)
         }
+        submenu.addItem(NSMenuItem.separator())
+        let deleteItem = NSMenuItem(title: "Delete Session", action: #selector(deleteSession(_:)), keyEquivalent: "")
+        deleteItem.target = self
+        deleteItem.representedObject = entry
+        submenu.addItem(deleteItem)
         item.submenu = submenu
         return item
     }
@@ -164,12 +267,17 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func openSession(_ sender: NSMenuItem) {
+    @objc func openSession(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(entry.session.resumeCmd, forType: .string)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?.showCopiedToast(title: entry.session.title, command: entry.session.resumeCmd)
+        let command = StatusMenuLogic.clipboardCommand(for: entry.session)
+        pasteboard.clearContents()
+        pasteboard.setString(command, forType: .string)
+        if let toastHandler {
+            toastHandler(entry.session.title, command)
+        } else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+                self?.showCopiedToast(title: entry.session.title, command: command)
+            }
         }
     }
 
@@ -237,19 +345,25 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         }
     }
 
-    @objc private func markDone(_ sender: NSMenuItem) {
+    @objc func markDone(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
-        SessionStore.markDone(id: entry.session.id)
+        statusWriter(entry.session.id, "done")
         rebuildMenu()
     }
 
-    @objc private func markPending(_ sender: NSMenuItem) {
+    @objc func markPending(_ sender: NSMenuItem) {
         guard let entry = sender.representedObject as? SessionMenuEntry else { return }
-        SessionStore.markPending(id: entry.session.id)
+        statusWriter(entry.session.id, "pending")
         rebuildMenu()
     }
 
-    private func loadStatusIcon() -> NSImage? {
+    @objc func deleteSession(_ sender: NSMenuItem) {
+        guard let entry = sender.representedObject as? SessionMenuEntry else { return }
+        sessionDeleter(entry.session.id)
+        rebuildMenu()
+    }
+
+    func loadStatusIcon() -> NSImage? {
         if let url = Bundle.module.url(forResource: "perch-logo-2", withExtension: "svg"),
            let image = NSImage(contentsOf: url) {
             image.size = NSSize(width: 18, height: 18)
@@ -271,21 +385,11 @@ class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func agentIcon(for agent: String) -> NSImage? {
-        let name: String
-        switch agent.lowercased() {
-        case "claude":    name = "claudecode"
-        case "codex":     name = "codex"
-        case "pi":        name = "pi"
-        case "windsurf":  name = "windsurf"
-        case "cursor":    name = "cursor"
-        case "trae":      name = "trae"
-        case "droid":     name = "droid"
-        case "goose":     name = "goose"
-        case "opencode":  name = "opencode"
-        case "kiro":      name = "kiro"
-        case "amp":       name = "amp"
-        default:          name = "claudecode"
-        }
+        let name = StatusMenuLogic.agentIconResourceName(for: agent)
+        return loadAgentIcon(named: name) ?? loadAgentIcon(named: "claudecode")
+    }
+
+    private func loadAgentIcon(named name: String) -> NSImage? {
         guard let url = Bundle.module.url(forResource: name, withExtension: "png"),
               let data = try? Data(contentsOf: url),
               let rep = NSBitmapImageRep(data: data) else { return nil }
@@ -294,28 +398,5 @@ class StatusMenuController: NSObject, NSMenuDelegate {
         image.addRepresentation(rep)
         image.isTemplate = true
         return image
-    }
-
-    private func relativeTime(from iso8601: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var date = formatter.date(from: iso8601)
-        if date == nil {
-            formatter.formatOptions = [.withInternetDateTime]
-            date = formatter.date(from: iso8601)
-        }
-        guard let createdAt = date else { return "" }
-
-        let seconds = Date().timeIntervalSince(createdAt)
-        let hours = seconds / 3600
-        let days = seconds / 86400
-
-        if hours < 1 {
-            return "< 1h"
-        } else if days < 1 {
-            return "\(Int(hours))h ago"
-        } else {
-            return "\(Int(days))d ago"
-        }
     }
 }

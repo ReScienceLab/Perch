@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://perch.app/schema/session.json",
   "title": "PerchSession",
-  "description": "A single agent session entry saved by a Perch /todo command.",
+  "description": "A single agent session entry saved by a Perch /perch command.",
   "type": "object",
   "required": [
     "id",
@@ -22,7 +22,7 @@
     },
     "agent": {
       "type": "string",
-      "enum": ["claude", "codex", "pi"],
+      "enum": ["claude", "codex", "pi", "windsurf", "cursor", "trae", "droid", "goose", "opencode", "kiro", "amp"],
       "description": "The AI agent that created this session entry."
     },
     "session_id": {
@@ -31,7 +31,7 @@
     },
     "working_dir": {
       "type": "string",
-      "description": "Absolute path of the working directory when /todo was invoked."
+      "description": "Absolute path of the working directory when /perch was invoked."
     },
     "title": {
       "type": "string",
@@ -40,7 +40,7 @@
     },
     "note": {
       "type": "string",
-      "description": "Optional freeform note provided by the user as the /todo argument."
+      "description": "Optional freeform note provided by the user as the /perch argument."
     },
     "priority": {
       "type": "string",
@@ -56,6 +56,11 @@
       "type": "string",
       "format": "date-time",
       "description": "ISO 8601 UTC timestamp of when this entry was created."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 UTC timestamp of the most recent /perch update for this entry. Omitted until the first update."
     },
     "resume_cmd": {
       "type": "string",

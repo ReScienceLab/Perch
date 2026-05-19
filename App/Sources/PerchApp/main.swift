@@ -1,10 +1,10 @@
 import AppKit
+import PerchAppCore
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 
-if let url = Bundle.module.url(forResource: "app-icon", withExtension: "png"),
-   let image = NSImage(contentsOf: url) {
+if let image = PerchResources.appIcon() {
     app.applicationIconImage = image
 }
 

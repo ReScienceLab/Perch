@@ -1,17 +1,25 @@
 import Foundation
 
-struct PerchConfig {
+struct PerchConfig: Equatable {
     var terminal: String = "ghostty"
     var sortBy: String = "date"
     var maxSessions: Int = 20
     var showBadge: Bool = true
 
     static func load() -> PerchConfig {
-        var config = PerchConfig()
         let path = (NSHomeDirectory() as NSString).appendingPathComponent(".config/perch/config")
+        return load(fromFile: path)
+    }
+
+    static func load(fromFile path: String) -> PerchConfig {
         guard let contents = try? String(contentsOfFile: path, encoding: .utf8) else {
-            return config
+            return PerchConfig()
         }
+        return parse(contents)
+    }
+
+    static func parse(_ contents: String) -> PerchConfig {
+        var config = PerchConfig()
         for line in contents.components(separatedBy: .newlines) {
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             guard !trimmed.isEmpty, !trimmed.hasPrefix("#") else { continue }
