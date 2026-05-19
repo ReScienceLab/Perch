@@ -1,3 +1,4 @@
+mod doctor;
 mod store;
 
 use clap::{Parser, Subcommand};
@@ -52,6 +53,12 @@ enum Commands {
         #[arg(long)]
         session_id: Option<String>,
     },
+    /// Diagnose Perch CLI, config, and agent command installation
+    Doctor {
+        /// Output machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 fn main() {
@@ -74,6 +81,7 @@ fn main() {
             id_or_prefix,
             session_id,
         } => store::reopen(id_or_prefix, session_id),
+        Commands::Doctor { json } => doctor::run(json),
     };
 
     if let Err(e) = result {

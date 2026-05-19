@@ -47,7 +47,7 @@ EOF
 done
 
 run_install() {
-	HOME="$HOME_DIR" PATH="$BIN_DIR:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/install.out"
+	HOME="$HOME_DIR" PATH="$BIN_DIR:/usr/bin:/bin:/usr/sbin:/sbin" PERCH_INSTALL_SOURCE=local "$TEST_REPO/install.sh" >"$TMP_DIR/install.out"
 }
 
 assert_file() {
@@ -60,7 +60,7 @@ assert_file() {
 assert_contains() {
 	file=$1
 	text=$2
-	if ! grep -Fq "$text" "$file"; then
+	if ! grep -Fq -- "$text" "$file"; then
 		printf 'Expected %s to contain: %s\n' "$file" "$text" >&2
 		printf 'Actual contents:\n' >&2
 		cat "$file" >&2
@@ -101,7 +101,8 @@ if [ "$(cat "$HOME_DIR/.config/perch/sessions.json")" != "[]" ]; then
 fi
 assert_contains "$HOME_DIR/.config/perch/config" "terminal = ghostty"
 assert_contains "$HOME_DIR/.config/perch/config" "show-badge = true"
-assert_contains "$TMP_DIR/install.out" "Done. Type /perch in any session to save it to Perch."
+assert_contains "$TMP_DIR/install.out" "Next steps:"
+assert_contains "$TMP_DIR/install.out" "Run perch doctor to verify your setup."
 
 printf '[{"id":"keep"}]' >"$HOME_DIR/.config/perch/sessions.json"
 printf 'terminal = terminal\n' >"$HOME_DIR/.config/perch/config"
@@ -120,10 +121,10 @@ NO_AGENT_HOME="$TMP_DIR/no-agent-home"
 NO_AGENT_BIN="$TMP_DIR/no-agent-bin"
 mkdir -p "$NO_AGENT_HOME" "$NO_AGENT_BIN"
 cp "$BIN_DIR/cargo" "$NO_AGENT_BIN/cargo"
-HOME="$NO_AGENT_HOME" PATH="$NO_AGENT_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/no-agent-install.out"
+HOME="$NO_AGENT_HOME" PATH="$NO_AGENT_BIN:/usr/bin:/bin:/usr/sbin:/sbin" PERCH_INSTALL_SOURCE=local "$TEST_REPO/install.sh" >"$TMP_DIR/no-agent-install.out"
 assert_file "$NO_AGENT_HOME/.config/perch/sessions.json"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] claude (not found in PATH)"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] codex (not found in PATH)"
-assert_contains "$TMP_DIR/no-agent-install.out" "[✗] pi (not found in PATH)"
+assert_contains "$TMP_DIR/no-agent-install.out" "- claude not found"
+assert_contains "$TMP_DIR/no-agent-install.out" "- codex not found"
+assert_contains "$TMP_DIR/no-agent-install.out" "- pi not found"
 
 printf 'install.sh tests passed\n'

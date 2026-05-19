@@ -7,8 +7,15 @@ Use Perch when you jump between multiple projects or AI coding agents and want o
 ## Requirements
 
 - macOS with Raycast installed
-- Perch CLI installed with `./install.sh`
+- Perch CLI installed with the one-line installer:
+
+  ```sh
+  curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh
+  ```
+
 - Sessions stored at `~/.config/perch/sessions.json` (default)
+
+After installing, run `perch doctor` to verify the CLI, config files, and agent `/perch` commands.
 
 ## Commands
 
@@ -35,4 +42,6 @@ Manually add a Claude Code, Codex, Pi, OpenCode, Cursor, Windsurf, or other AI c
 
 ## Troubleshooting
 
-If mutation actions fail, ensure `perch` is installed and available in your shell PATH or set **Perch CLI Path** to `~/.local/bin/perch`.
+If mutation actions fail, run `perch doctor`, ensure `perch` is available in your shell PATH, or set **Perch CLI Path** to `~/.local/bin/perch`.
+
+If the sessions file is missing, install Perch with the one-line installer above or save a session with `/perch` inside a supported coding agent.
