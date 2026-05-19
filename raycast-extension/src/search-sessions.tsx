@@ -113,11 +113,11 @@ function SessionItem({ session, onMutated }: { session: PerchSession; onMutated:
   }
 
   async function setDone() {
-    await mutateSession(() => markDone(session.id.slice(0, 8)), onMutated, "Marked Done");
+    await mutateSession(() => markDone(session.id), onMutated, "Marked Done");
   }
 
   async function setReopen() {
-    await mutateSession(() => reopen(session.id.slice(0, 8)), onMutated, "Reopened Session");
+    await mutateSession(() => reopen(session.id), onMutated, "Reopened Session");
   }
 
   return (

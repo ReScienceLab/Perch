@@ -188,12 +188,32 @@ final class PerchAppCoreTests: XCTestCase {
 
     func testLaunchAtLoginManagerWritesAndRemovesPlist() throws {
         let plistURL = tempFile("com.resciencelab.perch.plist")
+        var launchctlCalls: [[String]] = []
+        let launchctl: LaunchAtLoginManager.LaunchctlRunner = { launchctlCalls.append($0) }
 
-        try LaunchAtLoginManager.setEnabled(true, executablePath: "/tmp/PerchApp", plistURL: plistURL)
+        try LaunchAtLoginManager.setEnabled(true, executablePath: "/tmp/PerchApp", plistURL: plistURL, launchctl: launchctl)
         XCTAssertTrue(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
         XCTAssertTrue(try String(contentsOf: plistURL).contains("/tmp/PerchApp"))
+        XCTAssertEqual(launchctlCalls.map(\.[0]), ["bootout", "bootstrap", "enable"])
 
-        try LaunchAtLoginManager.setEnabled(false, plistURL: plistURL)
+        try LaunchAtLoginManager.setEnabled(false, plistURL: plistURL, launchctl: launchctl)
+        XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
+        XCTAssertEqual(launchctlCalls.last?.first, "bootout")
+    }
+
+    func testLaunchAtLoginManagerRemovesPlistWhenEnableFails() throws {
+        let plistURL = tempFile("com.resciencelab.perch.plist")
+        let launchctl: LaunchAtLoginManager.LaunchctlRunner = { arguments in
+            if arguments.first == "bootstrap" {
+                throw LaunchAtLoginError.launchctlFailed(arguments: arguments, status: 5, stderr: "boom")
+            }
+        }
+
+        XCTAssertThrowsError(
+            try LaunchAtLoginManager.setEnabled(true, executablePath: "/tmp/PerchApp", plistURL: plistURL, launchctl: launchctl)
+        ) { error in
+            XCTAssertEqual(error as? LaunchAtLoginError, .launchctlFailed(arguments: ["bootstrap", "gui/\(getuid())", plistURL.path], status: 5, stderr: "boom"))
+        }
         XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
     }
 

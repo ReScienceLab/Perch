@@ -1,6 +1,23 @@
 import Foundation
 
+enum LaunchAtLoginError: LocalizedError, Equatable {
+    case launchctlFailed(arguments: [String], status: Int32, stderr: String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .launchctlFailed(arguments, status, stderr):
+            let detail = stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+            if detail.isEmpty {
+                return "launchctl \(arguments.joined(separator: " ")) failed with status \(status)"
+            }
+            return "launchctl \(arguments.joined(separator: " ")) failed with status \(status): \(detail)"
+        }
+    }
+}
+
 struct LaunchAtLoginManager {
+    typealias LaunchctlRunner = (_ arguments: [String]) throws -> Void
+
     static let label = "com.resciencelab.perch"
 
     static var launchAgentsDirectory: URL {
@@ -21,23 +38,39 @@ struct LaunchAtLoginManager {
         FileManager.default.fileExists(atPath: plistURL.path)
     }
 
-    static func setEnabled(_ enabled: Bool, executablePath: String = currentExecutablePath, plistURL: URL = plistURL) throws {
+    static func setEnabled(
+        _ enabled: Bool,
+        executablePath: String = currentExecutablePath,
+        plistURL: URL = plistURL,
+        launchctl: LaunchctlRunner = runLaunchctl
+    ) throws {
         if enabled {
-            try enable(executablePath: executablePath, plistURL: plistURL)
+            try enable(executablePath: executablePath, plistURL: plistURL, launchctl: launchctl)
         } else {
-            try disable(plistURL: plistURL)
+            try disable(plistURL: plistURL, launchctl: launchctl)
         }
     }
 
-    static func enable(executablePath: String, plistURL: URL = plistURL) throws {
+    static func enable(
+        executablePath: String,
+        plistURL: URL = plistURL,
+        launchctl: LaunchctlRunner = runLaunchctl
+    ) throws {
         try FileManager.default.createDirectory(at: plistURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try plistContents(executablePath: executablePath).write(to: plistURL, atomically: true, encoding: .utf8)
-        launchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
-        launchctl(["enable", "gui/\(getuid())/\(label)"])
+
+        do {
+            try? launchctl(["bootout", "gui/\(getuid())", plistURL.path])
+            try launchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
+            try launchctl(["enable", "gui/\(getuid())/\(label)"])
+        } catch {
+            try? FileManager.default.removeItem(at: plistURL)
+            throw error
+        }
     }
 
-    static func disable(plistURL: URL = plistURL) throws {
-        launchctl(["bootout", "gui/\(getuid())", plistURL.path])
+    static func disable(plistURL: URL = plistURL, launchctl: LaunchctlRunner = runLaunchctl) throws {
+        try? launchctl(["bootout", "gui/\(getuid())", plistURL.path])
         if FileManager.default.fileExists(atPath: plistURL.path) {
             try FileManager.default.removeItem(at: plistURL)
         }
@@ -64,14 +97,23 @@ struct LaunchAtLoginManager {
         """
     }
 
-    private static func launchctl(_ arguments: [String]) {
+    static func runLaunchctl(_ arguments: [String]) throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         process.arguments = arguments
+
+        let stderr = Pipe()
         process.standardOutput = nil
-        process.standardError = nil
-        try? process.run()
+        process.standardError = stderr
+
+        try process.run()
         process.waitUntilExit()
+
+        guard process.terminationStatus == 0 else {
+            let data = stderr.fileHandleForReading.readDataToEndOfFile()
+            let message = String(data: data, encoding: .utf8) ?? ""
+            throw LaunchAtLoginError.launchctlFailed(arguments: arguments, status: process.terminationStatus, stderr: message)
+        }
     }
 
     private static func xmlEscape(_ value: String) -> String {
