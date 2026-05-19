@@ -67,6 +67,23 @@ swift build
 
 The Perch icon appears in the menu bar. Open it to view active and completed sessions.
 
+## Raycast Extension
+
+Perch also includes a Raycast extension for searching, resuming, and managing parked sessions from Raycast.
+
+```sh
+cd raycast-extension
+npm install
+npm run dev
+```
+
+Available commands:
+
+- **Search Sessions** — browse `~/.config/perch/sessions.json`, copy/paste project-aware resume commands, open working directories, mark sessions done, and reopen sessions.
+- **Add Session** — manually add sessions for agents that do not yet have an installed `/perch` command.
+
+Run `npm run lint` and `npm run build` in `raycast-extension/` before publishing or submitting changes.
+
 ## Usage
 
 ### Save the current session

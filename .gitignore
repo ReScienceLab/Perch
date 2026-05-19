@@ -2,3 +2,11 @@
 .hal/*
 !.hal/standards/
 !.hal/commands/
+
+# Generated planning/spec scratch space
+markshare/
+
+# Raycast extension local artifacts
+raycast-extension/node_modules/
+raycast-extension/dist/
+raycast-extension/.pi-lens/
