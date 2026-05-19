@@ -9,7 +9,7 @@ CLI_DEST="$INSTALL_DIR/perch"
 CONFIG_DIR="$HOME/.config/perch"
 SESSIONS_FILE="$CONFIG_DIR/sessions.json"
 CONFIG_FILE="$CONFIG_DIR/config"
-SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || pwd)
+SCRIPT_DIR=$(CDPATH="" cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || pwd)
 LOCAL_COMMAND_SOURCE="$SCRIPT_DIR/Commands/perch.md"
 LOCAL_CARGO_MANIFEST="$SCRIPT_DIR/cli/Cargo.toml"
 LOCAL_MODE=0
@@ -62,22 +62,55 @@ release_url() {
 	fi
 }
 
+sha256_file() {
+	file=$1
+	if have shasum; then
+		shasum -a 256 "$file" | awk '{print $1}'
+	elif have sha256sum; then
+		sha256sum "$file" | awk '{print $1}'
+	else
+		warn "shasum or sha256sum is required to verify Perch release artifacts."
+		return 1
+	fi
+}
+
+verify_checksum() {
+	file=$1
+	checksum_file=$2
+	expected=$(awk 'NR == 1 {print $1}' "$checksum_file")
+	actual=$(sha256_file "$file") || return 1
+	if [ -z "$expected" ]; then
+		warn "Checksum file is empty or invalid."
+		return 1
+	fi
+	if [ "$expected" != "$actual" ]; then
+		warn "Checksum verification failed for downloaded Perch CLI."
+		warn "Expected: $expected"
+		warn "Actual:   $actual"
+		return 1
+	fi
+}
+
 install_cli_from_release() {
 	artifact=$(platform_artifact) || return 1
 	url=$(release_url "$artifact")
+	checksum_url=$(release_url "$artifact.sha256")
 	tmp=$(mktemp "${TMPDIR:-/tmp}/perch.XXXXXX")
-	if download "$url" "$tmp"; then
-		mkdir -p "$INSTALL_DIR"
+	checksum_tmp=$(mktemp "${TMPDIR:-/tmp}/perch.XXXXXX.sha256")
+	if download "$url" "$tmp" && download "$checksum_url" "$checksum_tmp" && verify_checksum "$tmp" "$checksum_tmp"; then
 		chmod +x "$tmp"
-		mv "$tmp" "$CLI_DEST"
-		if "$CLI_DEST" --help >/dev/null 2>&1; then
+		if "$tmp" --help >/dev/null 2>&1; then
+			mkdir -p "$INSTALL_DIR"
+			mv "$tmp" "$CLI_DEST"
+			rm -f "$checksum_tmp"
 			log "  ✓ Downloaded $artifact from GitHub Release"
+			log "  ✓ Verified SHA-256 checksum"
 			log "  ✓ Installed to $CLI_DEST"
 			return 0
 		fi
-		warn "Downloaded CLI did not run successfully: $CLI_DEST --help"
+		warn "Downloaded CLI did not run successfully: $artifact --help"
 	fi
-	rm -f "$tmp"
+	rm -f "$tmp" "$checksum_tmp"
 	return 1
 }
 

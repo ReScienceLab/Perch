@@ -127,4 +127,46 @@ assert_contains "$TMP_DIR/no-agent-install.out" "- claude not found"
 assert_contains "$TMP_DIR/no-agent-install.out" "- codex not found"
 assert_contains "$TMP_DIR/no-agent-install.out" "- pi not found"
 
+case "$(uname -s):$(uname -m)" in
+	Darwin:arm64) RELEASE_ARTIFACT=perch-aarch64-apple-darwin ;;
+	Darwin:x86_64) RELEASE_ARTIFACT=perch-x86_64-apple-darwin ;;
+	*) RELEASE_ARTIFACT= ;;
+esac
+
+if [ -n "$RELEASE_ARTIFACT" ]; then
+	REMOTE_HOME="$TMP_DIR/remote-home"
+	REMOTE_BIN="$TMP_DIR/remote-bin"
+	REMOTE_RELEASE="$TMP_DIR/remote-release"
+	mkdir -p "$REMOTE_HOME" "$REMOTE_BIN" "$REMOTE_RELEASE"
+	cat >"$REMOTE_RELEASE/$RELEASE_ARTIFACT" <<'EOF'
+#!/bin/sh
+if [ "$1" = "--help" ]; then
+	printf 'mock release perch help\n'
+	exit 0
+fi
+printf 'mock release perch\n'
+EOF
+	chmod +x "$REMOTE_RELEASE/$RELEASE_ARTIFACT"
+	shasum -a 256 "$REMOTE_RELEASE/$RELEASE_ARTIFACT" >"$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256"
+	cat >"$REMOTE_BIN/curl" <<EOF
+#!/bin/sh
+url= dest=
+while [ \$# -gt 0 ]; do
+	case "\$1" in
+		-o) shift; dest=\$1 ;;
+		http*) url=\$1 ;;
+	esac
+	shift
+ done
+case "\$url" in
+	*.sha256) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256" "\$dest" ;;
+	*) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT" "\$dest" ;;
+esac
+EOF
+	chmod +x "$REMOTE_BIN/curl"
+	HOME="$REMOTE_HOME" PATH="$REMOTE_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/remote-install.out"
+	assert_file "$REMOTE_HOME/.local/bin/perch"
+	assert_contains "$TMP_DIR/remote-install.out" "Verified SHA-256 checksum"
+fi
+
 printf 'install.sh tests passed\n'
