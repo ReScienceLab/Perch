@@ -34,6 +34,27 @@ enum StatusMenuLogic {
         return "cd '\(dir)' && \(session.resumeCmd)"
     }
 
+    static func projectLabel(from workingDir: String) -> String {
+        guard !workingDir.isEmpty else { return "" }
+        let name = URL(fileURLWithPath: workingDir).lastPathComponent
+        return name.isEmpty ? workingDir : name
+    }
+
+    static func groupedByProject(from sessions: [Session]) -> [(label: String, sessions: [Session])] {
+        var groups: [(label: String, sessions: [Session])] = []
+        var index: [String: Int] = [:]
+        for session in sessions {
+            let label = projectLabel(from: session.workingDir)
+            if let i = index[label] {
+                groups[i].sessions.append(session)
+            } else {
+                index[label] = groups.count
+                groups.append((label: label, sessions: [session]))
+            }
+        }
+        return groups
+    }
+
     static func relativeTime(from iso8601: String, now: Date = Date()) -> String {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
@@ -175,8 +196,15 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             emptyItem.isEnabled = false
             menu.addItem(emptyItem)
         } else {
-            for session in pending {
-                menu.addItem(makeSessionItem(session, isDone: false))
+            let projectGroups = StatusMenuLogic.groupedByProject(from: pending)
+            let useGroupHeaders = projectGroups.count > 1
+            for group in projectGroups {
+                if useGroupHeaders {
+                    menu.addItem(makeProjectHeader(group.label))
+                }
+                for session in group.sessions {
+                    menu.addItem(makeSessionItem(session, isDone: false))
+                }
             }
         }
 
@@ -234,6 +262,19 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             keyEquivalent: "q"
         )
         menu.addItem(quitItem)
+    }
+
+    private func makeProjectHeader(_ label: String) -> NSMenuItem {
+        let item = NSMenuItem(title: label, action: nil, keyEquivalent: "")
+        item.isEnabled = false
+        item.attributedTitle = NSAttributedString(
+            string: label,
+            attributes: [
+                .font: NSFont.systemFont(ofSize: 11, weight: .medium),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ]
+        )
+        return item
     }
 
     private func makeSessionItem(_ session: Session, isDone: Bool) -> NSMenuItem {
