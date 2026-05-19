@@ -114,7 +114,7 @@ Inside a supported agent:
 Or from a terminal:
 
 ```sh
-perch done <perch-id-prefix>
+perch done <perch-id-or-prefix>
 perch done --session-id <agent-session-id>
 ```
 
@@ -159,9 +159,9 @@ perch add --title "..." --agent <agent> --session-id <id> [--working-dir <dir>] 
 perch list
 perch list --all
 perch list --all --json
-perch done <perch-id-prefix>
+perch done <perch-id-or-prefix>
 perch done --session-id <agent-session-id>
-perch reopen <perch-id-prefix>
+perch reopen <perch-id-or-prefix>
 perch reopen --session-id <agent-session-id>
 ```
 

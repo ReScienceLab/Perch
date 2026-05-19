@@ -174,16 +174,16 @@ fn list_from_path(path: &Path, all: bool, json: bool) -> Result<String> {
     Ok(output)
 }
 
-pub fn done(id_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
-    let output = set_status_at_path(&sessions_path(), id_prefix, session_id, "done", "Done")?;
+pub fn done(id_or_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
+    let output = set_status_at_path(&sessions_path(), id_or_prefix, session_id, "done", "Done")?;
     println!("{output}");
     Ok(())
 }
 
-pub fn reopen(id_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
+pub fn reopen(id_or_prefix: Option<String>, session_id: Option<String>) -> Result<()> {
     let output = set_status_at_path(
         &sessions_path(),
-        id_prefix,
+        id_or_prefix,
         session_id,
         "pending",
         "Reopened",
@@ -194,14 +194,14 @@ pub fn reopen(id_prefix: Option<String>, session_id: Option<String>) -> Result<(
 
 fn set_status_at_path(
     path: &Path,
-    id_prefix: Option<String>,
+    id_or_prefix: Option<String>,
     session_id: Option<String>,
     status: &str,
     verb: &str,
 ) -> Result<String> {
     let mut sessions = load_from_path(path)?;
 
-    let matches: Vec<usize> = match (id_prefix, session_id) {
+    let matches: Vec<usize> = match (id_or_prefix, session_id) {
         (_, Some(sid)) => sessions
             .iter()
             .enumerate()
@@ -509,8 +509,8 @@ mod tests {
     }
 
     #[test]
-    fn done_by_id_prefix_updates_one_matching_session() {
-        let path = temp_sessions_path("done-prefix");
+    fn done_by_id_or_prefix_updates_one_matching_session() {
+        let path = temp_sessions_path("done-id-or-prefix");
         let sessions = vec![
             sample_session("abc123", "s1", "First", "pending"),
             sample_session("def456", "s2", "Second", "pending"),
