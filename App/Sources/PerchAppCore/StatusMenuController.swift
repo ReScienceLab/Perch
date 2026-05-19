@@ -391,7 +391,7 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     func loadStatusIcon() -> NSImage? {
-        if let url = Bundle.module.url(forResource: "perch-logo-2", withExtension: "svg"),
+        if let url = Bundle.module.url(forResource: "perch-menubar", withExtension: "svg"),
            let image = NSImage(contentsOf: url) {
             image.size = NSSize(width: 18, height: 18)
             image.isTemplate = true
