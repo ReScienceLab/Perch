@@ -256,6 +256,25 @@ EOF
 		exit 1
 	fi
 	assert_contains "$TMP_DIR/missing-app-install.out" "PerchApp release artifact unavailable"
+
+	PIPE_HOME="$TMP_DIR/pipe-home"
+	mkdir -p "$PIPE_HOME" "$TEST_REPO/App/.build/debug"
+	cat >"$TEST_REPO/App/.build/debug/PerchApp" <<'EOF'
+#!/bin/sh
+exit 0
+EOF
+	chmod +x "$TEST_REPO/App/.build/debug/PerchApp"
+	(
+		cd "$TEST_REPO"
+		HOME="$PIPE_HOME" PATH="$MISSING_APP_BIN:/usr/bin:/bin:/usr/sbin:/sbin" sh <"$TEST_REPO/install.sh" >"$TMP_DIR/pipe-install.out" 2>&1
+	)
+	assert_file "$PIPE_HOME/.local/bin/perch"
+	assert_contains "$TMP_DIR/pipe-install.out" "PerchApp release artifact unavailable"
+	assert_contains "$TMP_DIR/pipe-install.out" "PerchApp not found, skipped"
+	if grep -Fq -- "$TEST_REPO/App/.build/debug/PerchApp" "$TMP_DIR/pipe-install.out"; then
+		printf 'piped installer should not treat current repo directory as local mode\n' >&2
+		exit 1
+	fi
 fi
 
 printf 'install.sh tests passed\n'
