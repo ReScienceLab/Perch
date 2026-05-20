@@ -431,6 +431,28 @@ final class PerchAppCoreTests: XCTestCase {
         )
     }
 
+    func testStatusMenuLogicBuildsSessionTooltipWithFullContext() {
+        let session = sampleSession(
+            agent: "pi",
+            sessionId: "pi-session",
+            workingDir: "/Users/yilin/Developer/Perch",
+            title: "Fix badge",
+            note: "Watcher regression",
+            status: "pending",
+            resumeCmd: "pi --session pi-session"
+        )
+
+        let tooltip = StatusMenuLogic.sessionTooltip(for: session)
+
+        XCTAssertTrue(tooltip.contains("Fix badge"))
+        XCTAssertTrue(tooltip.contains("Note: Watcher regression"))
+        XCTAssertTrue(tooltip.contains("Agent: pi"))
+        XCTAssertTrue(tooltip.contains("Status: pending"))
+        XCTAssertTrue(tooltip.contains("Session: pi-session"))
+        XCTAssertTrue(tooltip.contains("Path: /Users/yilin/Developer/Perch"))
+        XCTAssertTrue(tooltip.contains("Resume: cd '/Users/yilin/Developer/Perch' && pi --session pi-session"))
+    }
+
     func testStatusMenuLogicRelativeTimeHandlesSupportedDateFormats() throws {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]
@@ -492,6 +514,8 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertNotNil(controller.menu.items[0].image)
         XCTAssertEqual(controller.menu.items[0].submenu?.items.first?.title, "Mark as Done")
         XCTAssertEqual(controller.menu.items[0].submenu?.items.last?.title, "Delete Session")
+        XCTAssertTrue(controller.menu.items[0].toolTip?.contains("Path: /tmp/project") == true)
+        XCTAssertTrue(controller.menu.items[0].toolTip?.contains("Resume: cd '/tmp/project' && claude --resume session-id") == true)
 
         let doneItem = try! XCTUnwrap(controller.menu.items.first { $0.title.contains("Done") })
         XCTAssertEqual(doneItem.submenu?.items.first?.title, "Reopen")
