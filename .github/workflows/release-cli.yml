@@ -85,7 +85,7 @@ jobs:
           </dict>
           </plist>
           EOF
-          (cd package-app && ditto -c -k Perch.app ../PerchApp-${{ matrix.target }}.zip)
+          (cd package-app && ditto -c -k --keepParent Perch.app ../PerchApp-${{ matrix.target }}.zip)
           shasum -a 256 PerchApp-${{ matrix.target }}.zip > PerchApp-${{ matrix.target }}.zip.sha256
 
       - name: Upload workflow artifacts
