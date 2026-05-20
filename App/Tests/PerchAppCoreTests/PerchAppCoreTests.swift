@@ -605,6 +605,7 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertTrue(diagnostics.contains("launchctl bootstrap gui/501 /tmp/perch.plist failed with status 5"))
         XCTAssertTrue(diagnostics.contains("LaunchAgent:"))
         XCTAssertTrue(diagnostics.contains("Launchctl domain:"))
+        XCTAssertTrue(diagnostics.hasSuffix("\n"))
         XCTAssertEqual(item.state, .off)
     }
 

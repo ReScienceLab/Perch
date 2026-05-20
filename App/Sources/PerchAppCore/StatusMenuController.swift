@@ -68,7 +68,7 @@ enum StatusMenuLogic {
             "LaunchAgent: \(LaunchAtLoginManager.plistURL.path)",
             "Launchctl domain: gui/\(getuid())/\(LaunchAtLoginManager.label)",
             "Tip: Run `perch menubar doctor` or retry after moving Perch to /Applications."
-        ].joined(separator: "\n")
+        ].joined(separator: "\n") + "\n"
     }
 
     static func projectLabel(from workingDir: String) -> String {
@@ -532,7 +532,10 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             let diagnostics = StatusMenuLogic.launchAtLoginFailureDiagnostics(error: error, requestedEnabled: nextValue)
             pasteboard.clearContents()
             pasteboard.setString(diagnostics, forType: .string)
-            showCopiedToast(title: "Copied Launch at Login Diagnostics", command: diagnostics)
+            showCopiedToast(
+                title: "Copied Launch at Login Diagnostics",
+                command: "Full diagnostics are on the clipboard."
+            )
         }
     }
 
