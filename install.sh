@@ -11,13 +11,20 @@ SESSIONS_FILE="$CONFIG_DIR/sessions.json"
 CONFIG_FILE="$CONFIG_DIR/config"
 APP_INSTALL_DIR="${PERCH_APP_INSTALL_DIR:-$HOME/.local/share/perch}"
 APP_DEST="$APP_INSTALL_DIR/PerchApp"
-SCRIPT_DIR=$(CDPATH="" cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || pwd)
-LOCAL_COMMAND_SOURCE="$SCRIPT_DIR/Commands/perch.md"
-LOCAL_CARGO_MANIFEST="$SCRIPT_DIR/cli/Cargo.toml"
+SCRIPT_DIR=""
+if [ -f "${0:-}" ]; then
+	SCRIPT_DIR=$(CDPATH="" cd -- "$(dirname -- "$0")" 2>/dev/null && pwd || pwd)
+fi
+LOCAL_COMMAND_SOURCE=""
+LOCAL_CARGO_MANIFEST=""
 LOCAL_MODE=0
 
-if [ -f "$LOCAL_COMMAND_SOURCE" ] || [ -f "$LOCAL_CARGO_MANIFEST" ]; then
-	LOCAL_MODE=1
+if [ -n "$SCRIPT_DIR" ]; then
+	LOCAL_COMMAND_SOURCE="$SCRIPT_DIR/Commands/perch.md"
+	LOCAL_CARGO_MANIFEST="$SCRIPT_DIR/cli/Cargo.toml"
+	if [ -f "$LOCAL_COMMAND_SOURCE" ] || [ -f "$LOCAL_CARGO_MANIFEST" ]; then
+		LOCAL_MODE=1
+	fi
 fi
 
 if [ "${PERCH_INSTALL_SOURCE:-}" = "local" ]; then
