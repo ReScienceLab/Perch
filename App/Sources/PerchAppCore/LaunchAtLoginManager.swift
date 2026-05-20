@@ -69,6 +69,7 @@ struct LaunchAtLoginManager {
 
         do {
             try? launchctl(["bootout", "gui/\(getuid())/\(label)"])
+            try? launchctl(["enable", "gui/\(getuid())/\(label)"])
             if isCurrentProcess(executablePath: executablePath) {
                 return
             }
@@ -82,7 +83,6 @@ struct LaunchAtLoginManager {
     }
 
     static func disable(plistURL: URL = plistURL, launchctl: LaunchctlRunner = runLaunchctl) throws {
-        try? launchctl(["bootout", "gui/\(getuid())/\(label)"])
         if FileManager.default.fileExists(atPath: plistURL.path) {
             try FileManager.default.removeItem(at: plistURL)
         }

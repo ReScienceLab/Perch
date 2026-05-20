@@ -478,6 +478,7 @@ fn enable_login_at(
             return Err(error);
         }
     }
+    let _ = launchctl(&enable);
     if let Err(error) = launchctl(&bootstrap).and_then(|_| launchctl(&enable)) {
         let _ = fs::remove_file(plist);
         return Err(error);
@@ -487,14 +488,7 @@ fn enable_login_at(
     Ok(())
 }
 
-fn disable_login_at(plist: &Path, launchctl: impl Fn(&[String]) -> Result<()>) -> Result<()> {
-    let uid = uid_string();
-    let bootout = vec!["bootout".to_string(), format!("gui/{uid}/{LABEL}")];
-    if let Err(error) = launchctl(&bootout) {
-        if !is_ignorable_bootout_error(&error) {
-            return Err(error);
-        }
-    }
+fn disable_login_at(plist: &Path, _launchctl: impl Fn(&[String]) -> Result<()>) -> Result<()> {
     if plist.exists() {
         fs::remove_file(plist).with_context(|| format!("failed to remove {}", plist.display()))?;
     }
@@ -658,8 +652,9 @@ mod tests {
         assert_eq!(calls[0][0], "bootout");
         assert_eq!(calls[0].len(), 2);
         assert!(calls[0][1].contains(LABEL));
-        assert_eq!(calls[1][0], "bootstrap");
-        assert_eq!(calls[2][0], "enable");
+        assert_eq!(calls[1][0], "enable");
+        assert_eq!(calls[2][0], "bootstrap");
+        assert_eq!(calls[3][0], "enable");
     }
 
     #[test]
