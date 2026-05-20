@@ -387,3 +387,7 @@ perch menubar login enable
 
 - **GitHub**: https://github.com/ReScienceLab/Perch
 - **Issues**: https://github.com/ReScienceLab/Perch/issues
+
+## License
+
+Perch is released under the MIT License. See [LICENSE](LICENSE).

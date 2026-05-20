@@ -6,6 +6,12 @@
 # Generated planning/spec scratch space
 markshare/
 
+# Environment and local secrets
+.env
+.env.*
+*.env
+.dev.vars
+
 # Raycast extension local artifacts
 raycast-extension/node_modules/
 raycast-extension/dist/
