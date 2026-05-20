@@ -228,6 +228,34 @@ EOF
 		exit 1
 	fi
 	assert_contains "$TMP_DIR/skip-app-install.out" "PerchApp install skipped"
+
+	MISSING_APP_HOME="$TMP_DIR/missing-app-home"
+	MISSING_APP_BIN="$TMP_DIR/missing-app-bin"
+	mkdir -p "$MISSING_APP_HOME" "$MISSING_APP_BIN"
+	cat >"$MISSING_APP_BIN/curl" <<EOF
+#!/bin/sh
+url= dest=
+while [ \$# -gt 0 ]; do
+	case "\$1" in
+		-o) shift; dest=\$1 ;;
+		http*) url=\$1 ;;
+	esac
+	shift
+ done
+case "\$url" in
+	*PerchApp*) exit 22 ;;
+	*.sha256) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT.sha256" "\$dest" ;;
+	*) cp "$REMOTE_RELEASE/$RELEASE_ARTIFACT" "\$dest" ;;
+esac
+EOF
+	chmod +x "$MISSING_APP_BIN/curl"
+	HOME="$MISSING_APP_HOME" PATH="$MISSING_APP_BIN:/usr/bin:/bin:/usr/sbin:/sbin" "$TEST_REPO/install.sh" >"$TMP_DIR/missing-app-install.out" 2>&1
+	assert_file "$MISSING_APP_HOME/.local/bin/perch"
+	if [ -e "$MISSING_APP_HOME/.local/share/perch/PerchApp" ]; then
+		printf 'missing app artifact should not install PerchApp\n' >&2
+		exit 1
+	fi
+	assert_contains "$TMP_DIR/missing-app-install.out" "PerchApp release artifact unavailable"
 fi
 
 printf 'install.sh tests passed\n'
