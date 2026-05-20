@@ -95,7 +95,9 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
 
     let statusItem: NSStatusItem
     let menu: NSMenu
+    private var directoryWatcher: (any DispatchSourceFileSystemObject)?
     private var fileWatcher: (any DispatchSourceFileSystemObject)?
+    private var badgeRefreshWorkItem: DispatchWorkItem?
     private let sessionsPath: String
     private let sessionLoader: () -> [Session]
     private let configLoader: () -> PerchConfig
@@ -153,30 +155,80 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
+        refreshBadgeFromStore()
+
         if watchFile {
+            setupDirectoryWatcher()
             setupFileWatcher()
         }
     }
 
     deinit {
+        badgeRefreshWorkItem?.cancel()
+        directoryWatcher?.cancel()
         fileWatcher?.cancel()
         NSStatusBar.system.removeStatusItem(statusItem)
     }
 
-    private func setupFileWatcher() {
-        let fd = Darwin.open(sessionsPath, O_EVTONLY)
+    private func setupDirectoryWatcher() {
+        let directoryPath = (sessionsPath as NSString).deletingLastPathComponent
+        let fd = Darwin.open(directoryPath, O_EVTONLY)
         guard fd >= 0 else { return }
 
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
-            eventMask: .write,
+            eventMask: [.write, .rename, .delete],
             queue: .main
         )
-        // No-op: menu is rebuilt fresh each time menuWillOpen fires
-        source.setEventHandler {}
+        source.setEventHandler { [weak self] in
+            self?.handleSessionsFileChanged(reopenFileWatcher: true)
+        }
         source.setCancelHandler { Darwin.close(fd) }
         source.resume()
+        directoryWatcher = source
+    }
+
+    private func setupFileWatcher() {
+        let fd = Darwin.open(sessionsPath, O_EVTONLY)
+        guard fd >= 0 else {
+            fileWatcher?.cancel()
+            fileWatcher = nil
+            return
+        }
+
+        let source = DispatchSource.makeFileSystemObjectSource(
+            fileDescriptor: fd,
+            eventMask: [.write, .extend, .attrib, .rename, .delete],
+            queue: .main
+        )
+        source.setEventHandler { [weak self] in
+            self?.handleSessionsFileChanged(reopenFileWatcher: true)
+        }
+        source.setCancelHandler { Darwin.close(fd) }
+
+        let oldWatcher = fileWatcher
         fileWatcher = source
+        source.resume()
+        oldWatcher?.cancel()
+    }
+
+    private func handleSessionsFileChanged(reopenFileWatcher: Bool) {
+        if reopenFileWatcher {
+            setupFileWatcher()
+        }
+        badgeRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.refreshBadgeFromStore()
+        }
+        badgeRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: workItem)
+    }
+
+    private func refreshBadgeFromStore() {
+        let config = configLoader()
+        let sessions = sessionLoader()
+        let pendingCount = StatusMenuLogic.sessionGroups(from: sessions).pending.count
+        updateBadge(count: pendingCount, showBadge: config.showBadge)
     }
 
     public func menuWillOpen(_ menu: NSMenu) {
