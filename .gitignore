@@ -16,3 +16,6 @@ markshare/
 raycast-extension/node_modules/
 raycast-extension/dist/
 raycast-extension/.pi-lens/
+
+# Local git worktrees
+.worktrees/
