@@ -17,12 +17,16 @@ fn temp_home(name: &str) -> PathBuf {
 }
 
 fn perch(home: &PathBuf, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_perch"))
-        .args(args)
-        .env("HOME", home)
-        .current_dir(home)
-        .output()
-        .unwrap()
+    perch_with_env(home, args, &[])
+}
+
+fn perch_with_env(home: &PathBuf, args: &[&str], envs: &[(String, String)]) -> Output {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_perch"));
+    command.args(args).env("HOME", home).current_dir(home);
+    for (key, value) in envs {
+        command.env(key, value);
+    }
+    command.output().unwrap()
 }
 
 fn stdout(output: &Output) -> String {
@@ -31,6 +35,111 @@ fn stdout(output: &Output) -> String {
 
 fn stderr(output: &Output) -> String {
     String::from_utf8(output.stderr.clone()).unwrap()
+}
+
+#[test]
+fn menubar_help_lists_lifecycle_and_login_commands() {
+    let home = temp_home("menubar-help");
+
+    let help = perch(&home, &["menubar", "--help"]);
+    assert!(help.status.success(), "stderr: {}", stderr(&help));
+    let help_text = stdout(&help);
+    assert!(help_text.contains("start"));
+    assert!(help_text.contains("stop"));
+    assert!(help_text.contains("status"));
+    assert!(help_text.contains("login"));
+
+    let login_help = perch(&home, &["menubar", "login", "--help"]);
+    assert!(
+        login_help.status.success(),
+        "stderr: {}",
+        stderr(&login_help)
+    );
+    let login_help_text = stdout(&login_help);
+    assert!(login_help_text.contains("enable"));
+    assert!(login_help_text.contains("disable"));
+    assert!(login_help_text.contains("status"));
+}
+
+#[cfg(target_os = "macos")]
+#[test]
+fn menubar_status_stop_and_login_commands_use_mocked_system_tools() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let home = temp_home("menubar-actions");
+    let app = home.join(".local/share/perch/PerchApp");
+    fs::create_dir_all(app.parent().unwrap()).unwrap();
+    fs::write(&app, "#!/bin/sh\nexit 0\n").unwrap();
+    let mut app_permissions = fs::metadata(&app).unwrap().permissions();
+    app_permissions.set_mode(0o755);
+    fs::set_permissions(&app, app_permissions).unwrap();
+
+    let bin = home.join("bin");
+    fs::create_dir_all(&bin).unwrap();
+    let pgrep = bin.join("pgrep");
+    fs::write(&pgrep, "#!/bin/sh\nprintf '4242\\n'\n").unwrap();
+    let kill_log = home.join("kill.log");
+    let kill = bin.join("kill");
+    fs::write(
+        &kill,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >>{}\n",
+            kill_log.display()
+        ),
+    )
+    .unwrap();
+    let launchctl_log = home.join("launchctl.log");
+    let launchctl = bin.join("launchctl");
+    fs::write(
+        &launchctl,
+        format!(
+            "#!/bin/sh\nprintf '%s\\n' \"$*\" >>{}\n",
+            launchctl_log.display()
+        ),
+    )
+    .unwrap();
+    for tool in [&pgrep, &kill, &launchctl] {
+        let mut permissions = fs::metadata(tool).unwrap().permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(tool, permissions).unwrap();
+    }
+
+    let envs = vec![
+        ("PERCH_PGREP".to_string(), pgrep.display().to_string()),
+        ("PERCH_KILL".to_string(), kill.display().to_string()),
+        (
+            "PERCH_LAUNCHCTL".to_string(),
+            launchctl.display().to_string(),
+        ),
+        (
+            "PERCH_PROCESS_PATH_4242".to_string(),
+            app.display().to_string(),
+        ),
+    ];
+
+    let status = perch_with_env(&home, &["menubar", "status"], &envs);
+    assert!(status.status.success(), "stderr: {}", stderr(&status));
+    assert!(stdout(&status).contains("running (4242)"));
+
+    let stop = perch_with_env(&home, &["menubar", "stop"], &envs);
+    assert!(stop.status.success(), "stderr: {}", stderr(&stop));
+    assert!(fs::read_to_string(&kill_log)
+        .unwrap()
+        .contains("-TERM 4242"));
+
+    let enable = perch_with_env(&home, &["menubar", "login", "enable"], &envs);
+    assert!(enable.status.success(), "stderr: {}", stderr(&enable));
+    let plist = home.join("Library/LaunchAgents/com.resciencelab.perch.plist");
+    assert!(fs::read_to_string(&plist)
+        .unwrap()
+        .contains(&app.display().to_string()));
+    let launchctl_calls = fs::read_to_string(&launchctl_log).unwrap();
+    assert!(launchctl_calls.contains("bootstrap"));
+    assert!(launchctl_calls.contains("enable gui/"));
+
+    let disable = perch_with_env(&home, &["menubar", "login", "disable"], &envs);
+    assert!(disable.status.success(), "stderr: {}", stderr(&disable));
+    assert!(!plist.exists());
 }
 
 #[test]

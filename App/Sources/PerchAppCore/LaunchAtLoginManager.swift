@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 enum LaunchAtLoginError: LocalizedError, Equatable {
@@ -67,7 +68,7 @@ struct LaunchAtLoginManager {
         try plistContents(executablePath: executablePath).write(to: plistURL, atomically: true, encoding: .utf8)
 
         do {
-            try? launchctl(["bootout", "gui/\(getuid())", plistURL.path])
+            try? launchctl(["bootout", "gui/\(getuid())/\(label)"])
             try launchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
             try launchctl(["enable", "gui/\(getuid())/\(label)"])
         } catch {
@@ -77,7 +78,7 @@ struct LaunchAtLoginManager {
     }
 
     static func disable(plistURL: URL = plistURL, launchctl: LaunchctlRunner = runLaunchctl) throws {
-        try? launchctl(["bootout", "gui/\(getuid())", plistURL.path])
+        try? launchctl(["bootout", "gui/\(getuid())/\(label)"])
         if FileManager.default.fileExists(atPath: plistURL.path) {
             try FileManager.default.removeItem(at: plistURL)
         }
@@ -108,6 +109,10 @@ struct LaunchAtLoginManager {
             <true/>
             <key>KeepAlive</key>
             <false/>
+            <key>LimitLoadToSessionType</key>
+            <string>Aqua</string>
+            <key>ProcessType</key>
+            <string>Interactive</string>
         </dict>
         </plist>
         """
