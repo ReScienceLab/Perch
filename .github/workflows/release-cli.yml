@@ -59,9 +59,16 @@ jobs:
             echo "Built executable did not identify as PerchApp"
             exit 1
           fi
+          RESOURCE_BUNDLE=$(find App/.build -path '*/release/PerchApp_PerchAppCore.bundle' -type d | head -n 1)
+          if [ -z "$RESOURCE_BUNDLE" ]; then
+            echo "Could not find PerchAppCore resource bundle"
+            find App/.build -name 'PerchApp_PerchAppCore.bundle' -type d -print
+            exit 1
+          fi
           rm -rf package-app
           mkdir -p package-app/Perch.app/Contents/MacOS package-app/Perch.app/Contents/Resources
           cp "$APP_BIN" package-app/Perch.app/Contents/MacOS/PerchApp
+          cp -R "$RESOURCE_BUNDLE" package-app/Perch.app/PerchApp_PerchAppCore.bundle
           chmod +x package-app/Perch.app/Contents/MacOS/PerchApp
           cat > package-app/Perch.app/Contents/Info.plist <<'EOF'
           <?xml version="1.0" encoding="UTF-8"?>
@@ -77,7 +84,7 @@ jobs:
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
-            <string>0.1.1</string>
+            <string>0.1.2</string>
             <key>LSMinimumSystemVersion</key>
             <string>13.0</string>
             <key>LSUIElement</key>
