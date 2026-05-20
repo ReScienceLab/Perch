@@ -24,7 +24,9 @@ if [ "${PERCH_INSTALL_SOURCE:-}" = "local" ]; then
 	LOCAL_MODE=1
 fi
 
+PERCH_INSTALL_APP_EXPLICIT=1
 if [ -z "${PERCH_INSTALL_APP+x}" ]; then
+	PERCH_INSTALL_APP_EXPLICIT=0
 	if [ "$(uname -s 2>/dev/null || true)" = "Darwin" ]; then
 		PERCH_INSTALL_APP=1
 	else
@@ -410,7 +412,16 @@ install_perch_app() {
 		log "  - Local PerchApp build not found, skipped"
 		return 0
 	fi
-	install_app_from_release
+	if install_app_from_release; then
+		return 0
+	fi
+	if [ "$PERCH_INSTALL_APP_EXPLICIT" -eq 1 ]; then
+		warn "PerchApp installation failed. Set PERCH_INSTALL_APP=0 to skip app installation."
+		return 1
+	fi
+	warn "  - PerchApp release artifact unavailable; CLI installation will continue."
+	warn "  - Re-run with PERCH_INSTALL_APP=1 after the next release to require app installation."
+	return 0
 }
 
 open_perch_app_if_available() {
