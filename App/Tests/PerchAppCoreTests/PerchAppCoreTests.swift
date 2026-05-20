@@ -202,11 +202,11 @@ final class PerchAppCoreTests: XCTestCase {
         try LaunchAtLoginManager.setEnabled(true, executablePath: executable.path, plistURL: plistURL, launchctl: launchctl)
         XCTAssertTrue(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
         XCTAssertTrue(try String(contentsOf: plistURL).contains(executable.path))
-        XCTAssertEqual(launchctlCalls.map(\.[0]), ["bootout", "bootstrap", "enable"])
+        XCTAssertEqual(launchctlCalls.map(\.[0]), ["bootout", "enable", "bootstrap", "enable"])
 
         try LaunchAtLoginManager.setEnabled(false, plistURL: plistURL, launchctl: launchctl)
         XCTAssertFalse(LaunchAtLoginManager.isEnabled(plistURL: plistURL))
-        XCTAssertEqual(launchctlCalls.last?.first, "bootout")
+        XCTAssertEqual(launchctlCalls.map(\.[0]), ["bootout", "enable", "bootstrap", "enable"])
     }
 
     func testLaunchAtLoginManagerRemovesPlistWhenEnableFails() throws {
