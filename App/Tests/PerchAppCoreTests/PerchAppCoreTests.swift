@@ -578,6 +578,36 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertEqual(item.state, .on)
     }
 
+    func testStatusMenuControllerCopiesLaunchAtLoginFailureDiagnostics() throws {
+        let pasteboard = NSPasteboard.withUniqueName()
+        let expectedError = LaunchAtLoginError.launchctlFailed(
+            arguments: ["bootstrap", "gui/501", "/tmp/perch.plist"],
+            status: 5,
+            stderr: "Input/output error"
+        )
+        let controller = StatusMenuController(
+            sessionLoader: { [] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            launchAtLoginGetter: { false },
+            launchAtLoginSetter: { _ in throw expectedError },
+            pasteboard: pasteboard,
+            watchFile: false
+        )
+        controller.rebuildMenu()
+
+        let item = try XCTUnwrap(controller.menu.items.first { $0.title == "Launch at Login" })
+        controller.toggleLaunchAtLogin(item)
+
+        let diagnostics = try XCTUnwrap(pasteboard.string(forType: .string))
+        XCTAssertTrue(diagnostics.contains("Perch Launch at Login failure diagnostics"))
+        XCTAssertTrue(diagnostics.contains("Requested state: enabled"))
+        XCTAssertTrue(diagnostics.contains("launchctl bootstrap gui/501 /tmp/perch.plist failed with status 5"))
+        XCTAssertTrue(diagnostics.contains("LaunchAgent:"))
+        XCTAssertTrue(diagnostics.contains("Launchctl domain:"))
+        XCTAssertEqual(item.state, .off)
+    }
+
     func testStatusMenuControllerOpenSessionCopiesResumeCommandAndShowsToast() {
         let pasteboard = NSPasteboard.withUniqueName()
         let session = sampleSession(
