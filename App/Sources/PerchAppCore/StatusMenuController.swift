@@ -34,6 +34,21 @@ enum StatusMenuLogic {
         return "cd '\(dir)' && \(session.resumeCmd)"
     }
 
+    static func sessionTooltip(for session: Session) -> String {
+        var lines = [
+            session.title,
+            "Agent: \(session.agent)",
+            "Status: \(session.status)",
+            "Session: \(session.sessionId)",
+            "Path: \(session.workingDir)",
+            "Resume: \(clipboardCommand(for: session))"
+        ]
+        if !session.note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            lines.insert("Note: \(session.note)", at: 1)
+        }
+        return lines.joined(separator: "\n")
+    }
+
     static func projectLabel(from workingDir: String) -> String {
         guard !workingDir.isEmpty else { return "" }
         let name = URL(fileURLWithPath: workingDir).lastPathComponent
@@ -338,6 +353,7 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             keyEquivalent: ""
         )
         item.image = agentIcon(for: session.agent)
+        item.toolTip = StatusMenuLogic.sessionTooltip(for: session)
         item.target = self
         if isDone {
             item.attributedTitle = NSAttributedString(
