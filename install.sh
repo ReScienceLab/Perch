@@ -273,6 +273,7 @@ find_extracted_app() {
 	extract_dir=$1
 	for app in \
 		"$extract_dir/PerchApp" \
+		"$extract_dir/Contents/MacOS/PerchApp" \
 		"$extract_dir/Perch.app/Contents/MacOS/PerchApp" \
 		"$extract_dir/PerchApp.app/Contents/MacOS/PerchApp"; do
 		if [ -f "$app" ]; then
