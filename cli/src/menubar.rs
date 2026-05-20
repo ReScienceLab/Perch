@@ -71,16 +71,7 @@ pub fn stop() -> Result<()> {
     }
 
     let pids: Vec<u32> = instances.iter().map(|instance| instance.pid).collect();
-    for pid in &pids {
-        let pid_arg = pid.to_string();
-        run_command(
-            "/bin/kill",
-            &[
-                std::ffi::OsStr::new("-TERM"),
-                std::ffi::OsStr::new(&pid_arg),
-            ],
-        )?;
-    }
+    terminate_pids(&pids)?;
     println!("Stopped Perch menu bar app: {}", format_pids(&pids));
     Ok(())
 }
@@ -101,6 +92,11 @@ pub fn status() -> Result<()> {
 pub fn login_enable(app_path: Option<PathBuf>) -> Result<()> {
     let app = find_app_path(app_path)?;
     let executable = resolve_executable(&app)?;
+    let running = running_instances()?;
+    let matching_pids = matching_instance_pids(&running, &executable);
+    if !matching_pids.is_empty() {
+        terminate_pids(&matching_pids)?;
+    }
     let home = home_dir()?;
     let plist = plist_path_for_home(&home);
     enable_login_at(&executable, &plist, run_launchctl)
@@ -258,6 +254,21 @@ fn launchctl_hint(args: &[String], stderr: &str) -> &'static str {
     } else {
         "Run `perch menubar login status` for the configured LaunchAgent path."
     }
+}
+
+#[cfg(target_os = "macos")]
+fn terminate_pids(pids: &[u32]) -> Result<()> {
+    for pid in pids {
+        let pid_arg = pid.to_string();
+        run_command(
+            "/bin/kill",
+            &[
+                std::ffi::OsStr::new("-TERM"),
+                std::ffi::OsStr::new(&pid_arg),
+            ],
+        )?;
+    }
+    Ok(())
 }
 
 fn format_pids(pids: &[u32]) -> String {
@@ -493,6 +504,7 @@ fn disable_login_at(plist: &Path, launchctl: impl Fn(&[String]) -> Result<()>) -
 fn is_ignorable_bootout_error(error: &anyhow::Error) -> bool {
     let message = error.to_string();
     message.contains("No such service")
+        || message.contains("No such process")
         || message.contains("not found")
         || message.contains("service is not loaded")
         || message.contains("Could not find service")

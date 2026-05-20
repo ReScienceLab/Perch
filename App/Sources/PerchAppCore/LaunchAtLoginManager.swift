@@ -69,8 +69,12 @@ struct LaunchAtLoginManager {
 
         do {
             try? launchctl(["bootout", "gui/\(getuid())/\(label)"])
+            if isCurrentProcess(executablePath: executablePath) {
+                return
+            }
             try launchctl(["bootstrap", "gui/\(getuid())", plistURL.path])
             try launchctl(["enable", "gui/\(getuid())/\(label)"])
+            terminateDuplicateInstances(executablePath: executablePath)
         } catch {
             try? FileManager.default.removeItem(at: plistURL)
             throw error
@@ -116,6 +120,52 @@ struct LaunchAtLoginManager {
         </dict>
         </plist>
         """
+    }
+
+    private static func isCurrentProcess(executablePath: String) -> Bool {
+        guard !currentExecutablePath.isEmpty else { return false }
+        return pathsReferToSameFile(currentExecutablePath, executablePath)
+    }
+
+    private static func terminateDuplicateInstances(executablePath: String, keepingPID: Int32 = getpid()) {
+        for pid in runningPerchAppPIDs() where pid != keepingPID {
+            guard let path = processExecutablePath(pid), pathsReferToSameFile(path, executablePath) else { continue }
+            Darwin.kill(pid, SIGTERM)
+        }
+    }
+
+    private static func runningPerchAppPIDs() -> [Int32] {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        process.arguments = ["-x", "PerchApp"]
+
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = nil
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+        } catch {
+            return []
+        }
+        guard process.terminationStatus == 0 else { return [] }
+
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        let text = String(data: data, encoding: .utf8) ?? ""
+        return text.split(whereSeparator: \.isNewline).compactMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
+    }
+
+    private static func processExecutablePath(_ pid: Int32) -> String? {
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let length = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        guard length > 0 else { return nil }
+        return String(cString: buffer)
+    }
+
+    private static func pathsReferToSameFile(_ lhs: String, _ rhs: String) -> Bool {
+        URL(fileURLWithPath: lhs).resolvingSymlinksInPath().standardizedFileURL.path ==
+            URL(fileURLWithPath: rhs).resolvingSymlinksInPath().standardizedFileURL.path
     }
 
     static func runLaunchctl(_ arguments: [String]) throws {
