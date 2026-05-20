@@ -8,8 +8,15 @@ public enum PerchResources {
 }
 
 enum StatusMenuLogic {
+    static let completedDisplayLimit = 3
+
     static func sessionGroups(from sessions: [Session]) -> (pending: [Session], done: [Session]) {
         (pending: sessions.filter { $0.status == "pending" }, done: sessions.filter { $0.status == "done" })
+    }
+
+    static func visibleCompletedSessions(from sessions: [Session], limit: Int = completedDisplayLimit) -> (visible: [Session], hiddenCount: Int) {
+        guard sessions.count > limit else { return (sessions, 0) }
+        return (Array(sessions.prefix(limit)), sessions.count - limit)
     }
 
     static func agentIconResourceName(for agent: String) -> String {
@@ -288,8 +295,19 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
                 ]
             )
             menu.addItem(doneHeader)
-            for session in done {
+            let completed = StatusMenuLogic.visibleCompletedSessions(from: done)
+            for session in completed.visible {
                 menu.addItem(makeSessionItem(session, isDone: true))
+            }
+            if completed.hiddenCount > 0 {
+                let hiddenItem = NSMenuItem(
+                    title: "\(completed.hiddenCount) older completed hidden",
+                    action: nil,
+                    keyEquivalent: ""
+                )
+                hiddenItem.isEnabled = false
+                hiddenItem.toolTip = "Open Perch in Raycast or inspect sessions.json to search all completed sessions."
+                menu.addItem(hiddenItem)
             }
         }
 

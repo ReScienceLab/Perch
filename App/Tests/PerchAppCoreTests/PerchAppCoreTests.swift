@@ -302,6 +302,15 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertEqual(groups.done.map(\.id), ["done"])
     }
 
+    func testStatusMenuLogicLimitsVisibleCompletedSessions() {
+        let sessions = (1...5).map { sampleSession(id: "done-\($0)", status: "done") }
+
+        let completed = StatusMenuLogic.visibleCompletedSessions(from: sessions)
+
+        XCTAssertEqual(completed.visible.map(\.id), ["done-1", "done-2", "done-3"])
+        XCTAssertEqual(completed.hiddenCount, 2)
+    }
+
     func testStatusMenuLogicExtractsProjectLabelFromPath() {
         XCTAssertEqual(StatusMenuLogic.projectLabel(from: "/Users/yilin/Developer/Perch"), "Perch")
         XCTAssertEqual(StatusMenuLogic.projectLabel(from: "/tmp/my-project"), "my-project")
@@ -520,6 +529,27 @@ final class PerchAppCoreTests: XCTestCase {
         let doneItem = try! XCTUnwrap(controller.menu.items.first { $0.title.contains("Done") })
         XCTAssertEqual(doneItem.submenu?.items.first?.title, "Reopen")
         XCTAssertEqual(doneItem.submenu?.items.last?.title, "Delete Session")
+    }
+
+    func testStatusMenuControllerLimitsCompletedSessionsInMenu() {
+        let done = (1...5).map { sampleSession(id: "done-\($0)", title: "Done \($0)", status: "done") }
+        let controller = StatusMenuController(
+            sessionLoader: { done },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+
+        controller.rebuildMenu()
+
+        let titles = controller.menu.items.map(\.title)
+        XCTAssertTrue(titles.contains { $0.contains("Done 1") })
+        XCTAssertTrue(titles.contains { $0.contains("Done 2") })
+        XCTAssertTrue(titles.contains { $0.contains("Done 3") })
+        XCTAssertFalse(titles.contains { $0.contains("Done 4") })
+        XCTAssertFalse(titles.contains { $0.contains("Done 5") })
+        XCTAssertTrue(titles.contains("2 older completed hidden"))
     }
 
     func testStatusMenuControllerTogglesLaunchAtLogin() throws {
