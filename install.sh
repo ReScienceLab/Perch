@@ -424,6 +424,30 @@ install_perch_app() {
 	return 0
 }
 
+open_app_path() {
+	app=$1
+	if [ -z "$app" ] || [ ! -e "$app" ]; then
+		return 1
+	fi
+	case "$app" in
+	*.app)
+		if have open; then
+			open "$app" >/dev/null 2>&1 || true
+			log "  ✓ Opened $app"
+			return 0
+		fi
+		;;
+	*)
+		if [ -x "$app" ]; then
+			"$app" >/dev/null 2>&1 &
+			log "  ✓ Opened $app"
+			return 0
+		fi
+		;;
+	esac
+	return 1
+}
+
 open_perch_app_if_available() {
 	if [ "$(uname -s 2>/dev/null || true)" != "Darwin" ]; then
 		return 0
@@ -432,27 +456,15 @@ open_perch_app_if_available() {
 		log "  - PerchApp open skipped (PERCH_OPEN_APP=0)"
 		return 0
 	fi
-	for app in "$APP_DEST" "$(local_app_candidate 2>/dev/null || true)"; do
-		if [ -z "$app" ] || [ ! -e "$app" ]; then
-			continue
+	if open_app_path "$APP_DEST"; then
+		return 0
+	fi
+	if [ "$LOCAL_MODE" -eq 1 ]; then
+		local_candidate=$(local_app_candidate 2>/dev/null || true)
+		if [ -n "$local_candidate" ] && [ "$local_candidate" != "$APP_DEST" ] && open_app_path "$local_candidate"; then
+			return 0
 		fi
-		case "$app" in
-		*.app)
-			if have open; then
-				open "$app" >/dev/null 2>&1 || true
-				log "  ✓ Opened $app"
-				return 0
-			fi
-			;;
-		*)
-			if [ -x "$app" ]; then
-				"$app" >/dev/null 2>&1 &
-				log "  ✓ Opened $app"
-				return 0
-			fi
-			;;
-		esac
-	done
+	fi
 	log "  - PerchApp not found, skipped"
 }
 
