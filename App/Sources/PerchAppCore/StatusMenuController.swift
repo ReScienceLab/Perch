@@ -189,11 +189,12 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func setupFileWatcher() {
-        fileWatcher?.cancel()
-        fileWatcher = nil
-
         let fd = Darwin.open(sessionsPath, O_EVTONLY)
-        guard fd >= 0 else { return }
+        guard fd >= 0 else {
+            fileWatcher?.cancel()
+            fileWatcher = nil
+            return
+        }
 
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: fd,
@@ -204,8 +205,11 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             self?.handleSessionsFileChanged(reopenFileWatcher: true)
         }
         source.setCancelHandler { Darwin.close(fd) }
-        source.resume()
+
+        let oldWatcher = fileWatcher
         fileWatcher = source
+        source.resume()
+        oldWatcher?.cancel()
     }
 
     private func handleSessionsFileChanged(reopenFileWatcher: Bool) {
