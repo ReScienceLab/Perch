@@ -56,6 +56,21 @@ enum StatusMenuLogic {
         return lines.joined(separator: "\n")
     }
 
+    static func launchAtLoginFailureDiagnostics(error: Error, requestedEnabled: Bool, now: Date = Date()) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return [
+            "Perch Launch at Login failure diagnostics",
+            "Timestamp: \(formatter.string(from: now))",
+            "Requested state: \(requestedEnabled ? "enabled" : "disabled")",
+            "Error: \(error.localizedDescription)",
+            "Executable: \(LaunchAtLoginManager.currentExecutablePath)",
+            "LaunchAgent: \(LaunchAtLoginManager.plistURL.path)",
+            "Launchctl domain: gui/\(getuid())/\(LaunchAtLoginManager.label)",
+            "Tip: Run `perch menubar doctor` or retry after moving Perch to /Applications."
+        ].joined(separator: "\n") + "\n"
+    }
+
     static func projectLabel(from workingDir: String) -> String {
         guard !workingDir.isEmpty else { return "" }
         let name = URL(fileURLWithPath: workingDir).lastPathComponent
@@ -514,7 +529,13 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
             try launchAtLoginSetter(nextValue)
             sender.state = nextValue ? .on : .off
         } catch {
-            showCopiedToast(title: "Could Not Update Launch at Login", command: error.localizedDescription)
+            let diagnostics = StatusMenuLogic.launchAtLoginFailureDiagnostics(error: error, requestedEnabled: nextValue)
+            pasteboard.clearContents()
+            pasteboard.setString(diagnostics, forType: .string)
+            showCopiedToast(
+                title: "Copied Launch at Login Diagnostics",
+                command: "Full diagnostics are on the clipboard."
+            )
         }
     }
 
