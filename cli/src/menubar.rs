@@ -339,7 +339,7 @@ fn find_app_path(explicit: Option<PathBuf>) -> Result<PathBuf> {
     }
 
     bail!(
-        "PerchApp was not found. Current CLI releases look for ~/.local/share/perch/PerchApp, ~/Applications/Perch.app, /Applications/Perch.app, or local App/.build outputs. Run PERCH_INSTALL_APP=1 ./install.sh to install it."
+        "PerchApp was not found. Current CLI releases look for ~/.local/share/perch/Perch.app, ~/.local/share/perch/PerchApp, ~/Applications/Perch.app, /Applications/Perch.app, or local App/.build outputs. Run PERCH_INSTALL_APP=1 ./install.sh to install it."
     )
 }
 
@@ -349,6 +349,7 @@ fn candidate_app_paths(explicit: Option<PathBuf>) -> Vec<PathBuf> {
         paths.push(path);
     }
     if let Some(home) = env::var_os("HOME").map(PathBuf::from) {
+        paths.push(home.join(".local/share/perch/Perch.app"));
         paths.push(home.join(".local/share/perch/PerchApp"));
         paths.push(home.join("Applications/Perch.app"));
     }

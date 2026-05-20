@@ -10,6 +10,7 @@ CONFIG_DIR="$HOME/.config/perch"
 SESSIONS_FILE="$CONFIG_DIR/sessions.json"
 CONFIG_FILE="$CONFIG_DIR/config"
 APP_INSTALL_DIR="${PERCH_APP_INSTALL_DIR:-$HOME/.local/share/perch}"
+APP_BUNDLE_DEST="$APP_INSTALL_DIR/Perch.app"
 APP_DEST="$APP_INSTALL_DIR/PerchApp"
 SCRIPT_DIR=""
 if [ -f "${0:-}" ]; then
@@ -284,6 +285,23 @@ find_extracted_app() {
 	return 1
 }
 
+find_extracted_bundle() {
+	extract_dir=$1
+	for bundle in \
+		"$extract_dir/Perch.app" \
+		"$extract_dir/PerchApp.app"; do
+		if [ -d "$bundle/Contents/MacOS" ]; then
+			printf '%s' "$bundle"
+			return 0
+		fi
+	done
+	if [ -f "$extract_dir/Contents/MacOS/PerchApp" ]; then
+		printf '%s' "$extract_dir"
+		return 0
+	fi
+	return 1
+}
+
 expected_macho_arch() {
 	case "$(uname -m 2>/dev/null || true)" in
 	arm64) printf 'arm64' ;;
@@ -357,14 +375,30 @@ install_app_from_release() {
 			return 1
 		fi
 		mkdir -p "$APP_INSTALL_DIR"
-		app_tmp=$(mktemp "$APP_DEST.tmp.XXXXXX")
-		cp "$extracted_app" "$app_tmp"
-		chmod +x "$app_tmp"
-		mv "$app_tmp" "$APP_DEST"
+		extracted_bundle=$(find_extracted_bundle "$extract_tmp" || true)
+		if [ -n "$extracted_bundle" ]; then
+			bundle_tmp="$APP_BUNDLE_DEST.tmp.$$"
+			rm -rf "$bundle_tmp"
+			cp -R "$extracted_bundle" "$bundle_tmp"
+			chmod +x "$bundle_tmp/Contents/MacOS/PerchApp"
+			rm -rf "$APP_BUNDLE_DEST"
+			mv "$bundle_tmp" "$APP_BUNDLE_DEST"
+			ln -sfn "$APP_BUNDLE_DEST/Contents/MacOS/PerchApp" "$APP_DEST"
+		else
+			app_tmp=$(mktemp "$APP_DEST.tmp.XXXXXX")
+			cp "$extracted_app" "$app_tmp"
+			chmod +x "$app_tmp"
+			rm -rf "$APP_BUNDLE_DEST"
+			mv "$app_tmp" "$APP_DEST"
+		fi
 		rm -rf "$zip_tmp" "$checksum_tmp" "$extract_tmp"
 		log "  ✓ Downloaded $artifact from GitHub Release"
 		log "  ✓ Verified SHA-256 checksum"
-		log "  ✓ Installed PerchApp to $APP_DEST"
+		if [ -n "$extracted_bundle" ]; then
+			log "  ✓ Installed PerchApp to $APP_BUNDLE_DEST"
+		else
+			log "  ✓ Installed PerchApp to $APP_DEST"
+		fi
 		return 0
 	fi
 	rm -rf "$zip_tmp" "$checksum_tmp" "$extract_tmp"
@@ -399,6 +433,7 @@ install_app_from_local_build_if_available() {
 		return 1
 	fi
 	mkdir -p "$APP_INSTALL_DIR"
+	rm -rf "$APP_BUNDLE_DEST"
 	cp "$app" "$APP_DEST"
 	chmod +x "$APP_DEST"
 	log "  ✓ Installed local PerchApp to $APP_DEST"
@@ -462,6 +497,9 @@ open_perch_app_if_available() {
 	fi
 	if [ "$PERCH_OPEN_APP" = "0" ]; then
 		log "  - PerchApp open skipped (PERCH_OPEN_APP=0)"
+		return 0
+	fi
+	if open_app_path "$APP_BUNDLE_DEST"; then
 		return 0
 	fi
 	if open_app_path "$APP_DEST"; then

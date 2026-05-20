@@ -2,7 +2,7 @@ import AppKit
 import PerchAppCore
 
 if CommandLine.arguments.contains("--version") {
-    print("PerchApp 0.1.1")
+    print("PerchApp 0.1.2")
     exit(0)
 }
 
