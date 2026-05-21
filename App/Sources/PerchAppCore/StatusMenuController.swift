@@ -71,6 +71,10 @@ enum StatusMenuLogic {
         ].joined(separator: "\n") + "\n"
     }
 
+    static func displayTimestamp(for session: Session) -> String {
+        session.updatedAt ?? session.createdAt
+    }
+
     static func projectLabel(from workingDir: String) -> String {
         guard !workingDir.isEmpty else { return "" }
         let name = URL(fileURLWithPath: workingDir).lastPathComponent
@@ -379,7 +383,7 @@ public class StatusMenuController: NSObject, NSMenuDelegate {
     }
 
     private func makeSessionItem(_ session: Session, isDone: Bool) -> NSMenuItem {
-        let time = StatusMenuLogic.relativeTime(from: session.createdAt)
+        let time = StatusMenuLogic.relativeTime(from: StatusMenuLogic.displayTimestamp(for: session))
         let item = NSMenuItem(
             title: "\(session.title)  ·  \(time)",
             action: #selector(openSession(_:)),
