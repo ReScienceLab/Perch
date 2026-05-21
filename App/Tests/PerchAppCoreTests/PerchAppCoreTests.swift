@@ -462,6 +462,36 @@ final class PerchAppCoreTests: XCTestCase {
         XCTAssertTrue(tooltip.contains("Resume: cd '/Users/yilin/Developer/Perch' && pi --session pi-session"))
     }
 
+    func testStatusMenuLogicDisplayTimestampPrefersUpdatedAt() {
+        let updated = sampleSession(
+            createdAt: "2026-05-16T12:00:00Z",
+            updatedAt: "2026-05-18T11:30:00Z"
+        )
+        let createdOnly = sampleSession(createdAt: "2026-05-16T12:00:00Z")
+
+        XCTAssertEqual(StatusMenuLogic.displayTimestamp(for: updated), "2026-05-18T11:30:00Z")
+        XCTAssertEqual(StatusMenuLogic.displayTimestamp(for: createdOnly), "2026-05-16T12:00:00Z")
+    }
+
+    func testStatusMenuControllerUsesUpdatedAtForRelativeTime() {
+        let session = sampleSession(
+            title: "Recently updated",
+            createdAt: "2026-05-16T12:00:00Z",
+            updatedAt: ISO8601DateFormatter().string(from: Date())
+        )
+        let controller = StatusMenuController(
+            sessionLoader: { [session] },
+            configLoader: { PerchConfig() },
+            statusWriter: { _, _ in },
+            pasteboard: .withUniqueName(),
+            watchFile: false
+        )
+
+        controller.rebuildMenu()
+
+        XCTAssertTrue(controller.menu.items[0].title.contains("< 1h"), controller.menu.items[0].title)
+    }
+
     func testStatusMenuLogicRelativeTimeHandlesSupportedDateFormats() throws {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime]

@@ -126,6 +126,12 @@ fn normalize_session_id(agent: &str, session_id: &str) -> String {
     session_id.to_string()
 }
 
+impl Session {
+    fn display_timestamp(&self) -> &str {
+        self.updated_at.as_deref().unwrap_or(&self.created_at)
+    }
+}
+
 fn resume_command(agent: &str, session_id: &str, working_dir: &str) -> String {
     match agent {
         "codex" => format!("codex resume {session_id}"),
@@ -165,7 +171,7 @@ fn list_from_path(path: &Path, all: bool, json: bool) -> Result<String> {
 
     let mut output = String::new();
     for s in &filtered {
-        let age = time_ago(&s.created_at);
+        let age = time_ago(s.display_timestamp());
         output.push_str(&format!(
             "{:.8}  {:<6}  {}  {}\n",
             s.id, s.agent, s.title, age
@@ -491,6 +497,20 @@ mod tests {
         assert!(output.contains("Pending title"));
         assert!(output.contains("ago"));
         assert!(!output.contains("Done title"));
+    }
+
+    #[test]
+    fn list_text_uses_updated_at_when_present() {
+        let path = temp_sessions_path("list-updated-time");
+        let mut session = sample_session("pending123456", "s1", "Pending title", "pending");
+        session.created_at = "2026-05-16T12:00:00Z".to_string();
+        session.updated_at = Some(Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string());
+        save_to_path(&path, &[session]).unwrap();
+
+        let output = list_from_path(&path, false, false).unwrap();
+
+        assert!(output.contains("< 1h"), "{output}");
+        assert!(!output.contains("2d ago"), "{output}");
     }
 
     #[test]
