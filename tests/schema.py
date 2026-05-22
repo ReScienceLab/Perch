@@ -27,6 +27,7 @@ expected_agents = [
     "opencode",
     "kiro",
     "amp",
+    "hermes",
 ]
 
 assert schema["title"] == "PerchSession"

@@ -57,6 +57,11 @@ const AGENTS: &[AgentSpec] = &[
         binary: "opencode",
         command_path: ".config/opencode/commands/perch.md",
     },
+    AgentSpec {
+        name: "Hermes",
+        binary: "hermes",
+        command_path: ".hermes/skills/perch/SKILL.md",
+    },
 ];
 
 pub fn run(json: bool) -> Result<()> {

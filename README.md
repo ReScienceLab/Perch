@@ -38,7 +38,7 @@ Then:
 
 1. Make sure `~/.local/bin` is in your shell `PATH`.
 2. Restart your coding agent.
-3. Type `/perch My task title` inside Claude Code, Codex, Pi, Droid, or OpenCode to save the current session.
+3. Type `/perch My task title` inside Claude Code, Codex, Pi, Droid, OpenCode, or Hermes to save the current session.
 4. Resume from Raycast with **Search Sessions**, from the menu bar, or by running `perch list` and copying the resume command.
 5. Verify setup any time with:
 
@@ -89,6 +89,7 @@ Prefer a launcher? Open Raycast's **Search Sessions** command or the Perch menu 
 | Pi          | Automatic        | `pi --session <id>`              |
 | Droid       | Automatic        | `droid --resume <id>`            |
 | OpenCode    | Automatic        | `opencode session resume <id>`   |
+| Hermes      | Automatic        | `hermes --resume <id>`           |
 | Goose       | Manual CLI add   | `goose session -r --name <id>`   |
 | Kiro        | Manual CLI add   | `kiro-cli chat --resume-id <id>` |
 | Windsurf    | Manual CLI add   | `windsurf <working-dir>`         |
@@ -145,6 +146,7 @@ Make sure `~/.local/bin` is in your shell `PATH` and is also visible inside your
 | Pi          | `~/.pi/agent/skills/perch/SKILL.md`    |
 | Droid       | `~/.factory/skills/perch/SKILL.md`     |
 | OpenCode    | `~/.config/opencode/commands/perch.md` |
+| Hermes      | `~/.hermes/skills/perch/SKILL.md`      |
 
 ## Menu Bar App
 
@@ -296,7 +298,7 @@ perch doctor --json
 
 ## How `/perch` Finds the Current Session
 
-Perch uses one shared command file. The agent identifies itself (`claude`, `codex`, `pi`, `droid`, or `opencode`) and runs only its own session detector.
+Perch uses one shared command file. The agent identifies itself (`claude`, `codex`, `pi`, `droid`, `opencode`, or `hermes`) and runs only its own session detector.
 
 Current fast paths and fallbacks:
 
@@ -305,6 +307,7 @@ Current fast paths and fallbacks:
 - **Codex**: prefers `CODEX_SESSION_ID`, then the latest file in `~/.codex/sessions`.
 - **Droid**: prefers `DROID_SESSION_ID`, then `droid session list --json`.
 - **OpenCode**: prefers `OPENCODE_SESSION_ID`, then `opencode session list`.
+- **Hermes**: prefers `HERMES_SESSION_ID`, then `HERMES_TUI_ACTIVE_SESSION_FILE`, then `hermes sessions list --source cli --limit 1`.
 
 The command is intentionally strict: it should not try another agent's detector just because that binary exists on your machine.
 

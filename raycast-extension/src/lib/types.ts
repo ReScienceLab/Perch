@@ -10,6 +10,7 @@ export const AGENTS = [
   "opencode",
   "kiro",
   "amp",
+  "hermes",
 ] as const;
 
 export type PerchAgent = (typeof AGENTS)[number];

@@ -18,7 +18,7 @@ enum Commands {
     Add {
         #[arg(long)]
         title: String,
-        /// Agent name: claude, codex, or pi
+        /// Agent name: claude, codex, pi, hermes, or another supported agent
         #[arg(long)]
         agent: String,
         /// Agent-native session ID

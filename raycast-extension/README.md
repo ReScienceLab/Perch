@@ -1,6 +1,6 @@
 # Perch
 
-Perch helps developers search, resume, and manage parked Claude Code, Codex, Pi, OpenCode, Droid, Cursor, Windsurf, Goose, Kiro, Amp, and other AI coding agent sessions from Raycast.
+Perch helps developers search, resume, and manage parked Claude Code, Codex, Pi, OpenCode, Hermes, Droid, Cursor, Windsurf, Goose, Kiro, Amp, and other AI coding agent sessions from Raycast.
 
 Use Perch when you jump between multiple projects or AI coding agents and want one fast command palette for continuing saved sessions.
 
@@ -21,7 +21,7 @@ After installing, run `perch doctor` to verify the CLI, config files, and agent 
 
 ### Search Sessions
 
-Lists parked Claude Code, Codex, Pi, OpenCode, and other AI coding sessions from Perch. Press Enter to copy (or paste, depending on preferences) a project-aware resume command:
+Lists parked Claude Code, Codex, Pi, OpenCode, Hermes, and other AI coding sessions from Perch. Press Enter to copy (or paste, depending on preferences) a project-aware resume command:
 
 ```sh
 cd '/path/to/project' && claude --resume <session-id>
@@ -31,7 +31,7 @@ Actions include copy resume command, paste resume command, open working director
 
 ### Add Session
 
-Manually add a Claude Code, Codex, Pi, OpenCode, Cursor, Windsurf, or other AI coding session for agents that do not yet have a `/perch` command installed.
+Manually add a Claude Code, Codex, Pi, OpenCode, Hermes, Cursor, Windsurf, or other AI coding session for agents that do not yet have a `/perch` command installed.
 
 ## Preferences
 

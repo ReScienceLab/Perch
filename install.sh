@@ -257,6 +257,13 @@ install_agent_commands() {
 	else
 		log "  - opencode not found"
 	fi
+
+	if have hermes; then
+		install_skill "$HOME/.hermes/skills/perch/SKILL.md"
+		log "  ✓ Hermes → $HOME/.hermes/skills/perch/SKILL.md"
+	else
+		log "  - hermes not found"
+	fi
 }
 
 extract_zip() {

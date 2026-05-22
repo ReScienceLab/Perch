@@ -283,6 +283,7 @@ function agentIconName(agent: string): string {
     case "goose":
     case "opencode":
     case "kiro":
+    case "hermes":
       return agent.toLowerCase();
     case "amp":
     default:

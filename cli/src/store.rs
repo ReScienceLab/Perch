@@ -144,6 +144,7 @@ fn resume_command(agent: &str, session_id: &str, working_dir: &str) -> String {
         "opencode" => format!("opencode session resume {session_id}"),
         "kiro" => format!("kiro-cli chat --resume-id {session_id}"),
         "amp" => format!("amp threads continue {session_id}"),
+        "hermes" => format!("hermes --resume {session_id}"),
         _ => format!("claude --resume {session_id}"),
     }
 }
@@ -464,6 +465,7 @@ mod tests {
             ("opencode", "opencode session resume sid"),
             ("kiro", "kiro-cli chat --resume-id sid"),
             ("amp", "amp threads continue sid"),
+            ("hermes", "hermes --resume sid"),
             ("unknown", "claude --resume sid"),
         ];
 
