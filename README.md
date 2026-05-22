@@ -1,5 +1,13 @@
 # Perch
 
+[![Latest release](https://img.shields.io/github/v/release/ReScienceLab/Perch?sort=semver&label=release)](https://github.com/ReScienceLab/Perch/releases)
+[![Release CLI](https://github.com/ReScienceLab/Perch/actions/workflows/release-cli.yml/badge.svg)](https://github.com/ReScienceLab/Perch/actions/workflows/release-cli.yml)
+![Rust](https://img.shields.io/badge/Rust-2021-orange?logo=rust)
+![macOS](https://img.shields.io/badge/macOS-menu%20bar-blue?logo=apple)
+![Raycast](https://img.shields.io/badge/Raycast-extension-FF6363?logo=raycast)
+
+![Perch banner](assets/perch-banner.jpg)
+
 Perch helps developers park AI coding sessions and resume them later from the CLI, menu bar, or Raycast. Run `/perch` inside a supported coding agent, and Perch saves the current session into `~/.config/perch/sessions.json`.
 
 ## 60-Second Quick Start
