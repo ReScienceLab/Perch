@@ -19,6 +19,13 @@ AI coding sessions are valuable context, but every agent has a different way to 
 - Keep everything local in a simple JSON file — no account, server, or sync service required.
 - Use the CLI, menu bar, or Raycast depending on where you are already working.
 
+## Common Use Cases
+
+- **Waiting on another person**: You are drafting an email, reviewing a PR, or coordinating a decision, but the other person cannot reply in real time. Park the AI session with `/perch Waiting on Alex about API contract`, close the terminal, and quickly resume the exact context when they respond.
+- **Too many terminal windows**: Your desktop is full of half-finished agent sessions. Save the ones you are not actively using to Perch, close those terminals, and bring them back later from Raycast, the menu bar, or `perch list`.
+- **Context switching between projects**: Pause a debugging thread in one repo, jump to another urgent task, then resume from the right working directory without hunting through shell history.
+- **End-of-day cleanup**: Park unfinished work before shutting down so tomorrow starts with a searchable list of pending AI sessions instead of scattered terminal tabs.
+
 ## 60-Second Quick Start
 
 Install the Perch CLI and supported agent `/perch` commands:
