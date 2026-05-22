@@ -10,6 +10,15 @@
 
 Perch helps developers park AI coding sessions and resume them later from the CLI, menu bar, or Raycast. Run `/perch` inside a supported coding agent, and Perch saves the current session into `~/.config/perch/sessions.json`.
 
+## Why Perch?
+
+AI coding sessions are valuable context, but every agent has a different way to resume work. Perch gives you one local, agent-agnostic parking lot for those sessions so you can:
+
+- Save the current thread with the same `/perch` command across supported agents.
+- Resume from the correct project directory without remembering each agent's command syntax.
+- Keep everything local in a simple JSON file — no account, server, or sync service required.
+- Use the CLI, menu bar, or Raycast depending on where you are already working.
+
 ## 60-Second Quick Start
 
 Install the Perch CLI and supported agent `/perch` commands:
@@ -32,6 +41,21 @@ perch doctor
 
 Perch stores sessions locally only; no service or account is required.
 
+## Demo
+
+```text
+# 1. Save the current AI coding session from inside a supported agent
+/perch Backend: finish OAuth callback
+
+# 2. Later, list parked sessions from any terminal
+perch list
+
+# 3. Resume from the saved project directory
+cd '/path/to/project' && claude --resume <session-id>
+```
+
+Prefer a launcher? Open Raycast's **Search Sessions** command or the Perch menu bar icon, choose a parked session, and Perch copies the right project-aware resume command for you.
+
 ## Highlights
 
 - One `/perch` command shared across agents — no per-agent prompt drift.
@@ -39,6 +63,15 @@ Perch stores sessions locally only; no service or account is required.
 - Simple local JSON storage; no service or account required.
 - Menu bar UI for viewing pending/completed sessions.
 - CLI for scripting, listing, marking done, and reopening sessions.
+
+## Feature Checklist
+
+- [x] Local-only session storage in `~/.config/perch/sessions.json`
+- [x] Shared `/perch` command for Claude Code, Codex, Pi, Droid, and OpenCode
+- [x] Resume command generation for additional workspace/session-based agents
+- [x] Native macOS menu bar app
+- [x] Raycast extension for search, resume, add, mark done, and reopen flows
+- [x] `perch doctor` diagnostics for install and environment issues
 
 ## Supported Agents
 
@@ -65,6 +98,8 @@ Recommended remote install:
 ```sh
 curl -fsSL https://raw.githubusercontent.com/ReScienceLab/Perch/main/install.sh | sh
 ```
+
+You can also download prebuilt release assets from the [latest GitHub Release](https://github.com/ReScienceLab/Perch/releases/latest).
 
 Local repo install for contributors:
 
@@ -266,6 +301,22 @@ Current fast paths and fallbacks:
 
 The command is intentionally strict: it should not try another agent's detector just because that binary exists on your machine.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    Agent[AI coding agent] -->|/perch title| Command[Shared /perch command]
+    Command --> CLI[perch CLI]
+    Terminal[Terminal] --> CLI
+    Raycast[Raycast extension] --> Store[(sessions.json)]
+    MenuBar[macOS menu bar app] --> Store
+    CLI --> Store
+    Store --> Resume[Project-aware resume command]
+    Resume --> Agent
+```
+
+Perch keeps the core simple: supported agents call the same installed command, the CLI writes local session records, and UI surfaces read the same `sessions.json` file.
+
 ## Data Storage
 
 Sessions are stored locally at:
@@ -340,6 +391,21 @@ cd App && swift build -c release
 ```
 
 ## Troubleshooting
+
+Quick checks:
+
+```sh
+perch doctor
+perch doctor --json
+perch list --all
+```
+
+Most setup issues come from one of these causes:
+
+- `~/.local/bin` is not on `PATH` for the shell or agent process.
+- The coding agent was not restarted after installation.
+- The agent does not expose a session ID and the fallback detector cannot find one.
+- `~/.config/perch/sessions.json` is missing or contains invalid JSON.
 
 ### `/perch` says `perch: command not found`
 
