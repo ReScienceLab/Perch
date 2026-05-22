@@ -27,6 +27,8 @@ export function fallbackResumeCommand(session: PerchSession): string {
       return `kiro-cli chat --resume-id ${shellQuoteBareArgument(sessionId)}`;
     case "amp":
       return `amp threads continue ${shellQuoteBareArgument(sessionId)}`;
+    case "hermes":
+      return `hermes --resume ${shellQuoteBareArgument(sessionId)}`;
     case "claude":
     default:
       return `claude --resume ${shellQuoteBareArgument(sessionId)}`;

@@ -5,8 +5,8 @@ This is one shared command for all agents. You are already running inside exactl
 Hard rules:
 
 - Do not try detectors for other agents.
-- Do not run `droid`, `codex`, `pi`, `opencode`, or `claude` discovery commands unless that is the agent you are currently running inside.
-- If you are Claude Code, `AGENT=claude`. If you are Codex, `AGENT=codex`. If you are Pi, `AGENT=pi`. If you are Droid, `AGENT=droid`. If you are OpenCode, `AGENT=opencode`.
+- Do not run `droid`, `codex`, `pi`, `opencode`, `hermes`, or `claude` discovery commands unless that is the agent you are currently running inside.
+- If you are Claude Code, `AGENT=claude`. If you are Codex, `AGENT=codex`. If you are Pi, `AGENT=pi`. If you are Droid, `AGENT=droid`. If you are OpenCode, `AGENT=opencode`. If you are Hermes Agent, `AGENT=hermes`.
 
 ## 1. Get the current session ID
 
@@ -78,6 +78,26 @@ printf '%s\n' "$SESSION_ID"
 SESSION_ID="${OPENCODE_SESSION_ID:-${SESSION_ID:-}}"
 if [ -z "$SESSION_ID" ]; then
   SESSION_ID=$(opencode session list 2>/dev/null | head -1 | awk '{print $1}')
+fi
+printf '%s\n' "$SESSION_ID"
+```
+
+### Hermes Agent (`AGENT=hermes`)
+
+```sh
+SESSION_ID="${HERMES_SESSION_ID:-${SESSION_ID:-}}"
+if [ -z "$SESSION_ID" ] && [ -n "${HERMES_TUI_ACTIVE_SESSION_FILE:-}" ]; then
+  SESSION_ID=$(python3 - "$HERMES_TUI_ACTIVE_SESSION_FILE" <<'PY'
+import json, sys
+try:
+    print(json.load(open(sys.argv[1])).get("session_id", ""))
+except Exception:
+    print("")
+PY
+)
+fi
+if [ -z "$SESSION_ID" ]; then
+  SESSION_ID=$(hermes sessions list --source cli --limit 1 2>/dev/null | awk 'NR>2 {print $NF; exit}')
 fi
 printf '%s\n' "$SESSION_ID"
 ```

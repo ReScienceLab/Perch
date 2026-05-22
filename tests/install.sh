@@ -38,7 +38,7 @@ fi
 EOF
 chmod +x "$BIN_DIR/cargo"
 
-for agent in claude codex pi droid opencode; do
+for agent in claude codex pi droid opencode hermes; do
 	cat >"$BIN_DIR/$agent" <<'EOF'
 #!/bin/sh
 exit 0
@@ -78,17 +78,20 @@ assert_file "$HOME_DIR/.codex/skills/perch/SKILL.md"
 assert_file "$HOME_DIR/.pi/agent/skills/perch/SKILL.md"
 assert_file "$HOME_DIR/.factory/skills/perch/SKILL.md"
 assert_file "$HOME_DIR/.config/opencode/commands/perch.md"
+assert_file "$HOME_DIR/.hermes/skills/perch/SKILL.md"
 
 cmp "$TEST_REPO/Commands/perch.md" "$HOME_DIR/.claude/commands/perch.md"
 cmp "$TEST_REPO/Commands/perch.md" "$HOME_DIR/.config/opencode/commands/perch.md"
 for skill_file in \
 	"$HOME_DIR/.codex/skills/perch/SKILL.md" \
 	"$HOME_DIR/.pi/agent/skills/perch/SKILL.md" \
-	"$HOME_DIR/.factory/skills/perch/SKILL.md"; do
+	"$HOME_DIR/.factory/skills/perch/SKILL.md" \
+	"$HOME_DIR/.hermes/skills/perch/SKILL.md"; do
 	assert_contains "$skill_file" "name: perch"
 	assert_contains "$skill_file" "Save the current AI coding agent session to Perch"
 	assert_contains "$skill_file" 'If you are Claude Code, `AGENT=claude`'
 	assert_contains "$skill_file" 'CLAUDE_CODE_SESSION_ID'
+	assert_contains "$skill_file" 'HERMES_SESSION_ID'
 	assert_contains "$skill_file" "[0-9a-f]{8}-[0-9a-f]{4}"
 	assert_contains "$skill_file" 'Do not try detectors for other agents.'
 	assert_contains "$skill_file" "s#^/##; s#/#-#g"
@@ -126,6 +129,7 @@ assert_file "$NO_AGENT_HOME/.config/perch/sessions.json"
 assert_contains "$TMP_DIR/no-agent-install.out" "- claude not found"
 assert_contains "$TMP_DIR/no-agent-install.out" "- codex not found"
 assert_contains "$TMP_DIR/no-agent-install.out" "- pi not found"
+assert_contains "$TMP_DIR/no-agent-install.out" "- hermes not found"
 
 case "$(uname -s):$(uname -m)" in
 Darwin:arm64)

@@ -31,6 +31,7 @@ enum StatusMenuLogic {
         case "goose": return "goose"
         case "opencode": return "opencode"
         case "kiro": return "kiro"
+        case "hermes": return "hermes"
         case "amp": return "claudecode"
         default: return "claudecode"
         }

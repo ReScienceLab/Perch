@@ -419,6 +419,7 @@ final class PerchAppCoreTests: XCTestCase {
             ("goose", "goose"),
             ("opencode", "opencode"),
             ("kiro", "kiro"),
+            ("hermes", "hermes"),
             ("amp", "claudecode"),
             ("unknown", "claudecode")
         ]
